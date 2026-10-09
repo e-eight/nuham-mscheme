@@ -3,14 +3,14 @@
 Turns J-coupled nuclear matrix-element files (`me2j`, `me3j`) into the m-scheme quantities that
 fault-tolerant cost models need: 1-norms (λ), nonzero counts, and maximum magnitudes.
 
-Started 2026-10-09 as a spin-off of `../qchem-to-nuclear` (Batch 2). Status: Phase 0 spec drafted
+Started 2026-10-09 as a spin-off of [qchem-to-nuclear](https://github.com/e-eight/qchem-to-nuclear) (Batch 2). Status: Phase 0 spec drafted
 (`docs/spec.md`, awaiting review), no code.
 
 ## Why a separate package
 
-- `../nuhamil-alt` (nuham-jax) is meant to be a near drop-in replacement for NuHamil. NuHamil has no
+- [nuham-jax](https://github.com/e-eight/nuham-jax) is meant to be a near drop-in replacement for NuHamil. NuHamil has no
   m-scheme expansion, so this does not belong there.
-- `../qchem-to-nuclear` and `../nuclear-rank-representation` are in their science phase: no
+- [qchem-to-nuclear](https://github.com/e-eight/qchem-to-nuclear) and [nuclear-rank-representation](https://github.com/e-eight/nrrep) are in their science phase: no
   implementation code, only brute-force spot checks in `checks/`. This package is the
   implementation; the science repos consume its numbers and cite its commit.
 - Both science projects need it: qchem-to-nuclear for the chiral no-core Hamiltonian (rows 1, 3, 5
@@ -21,11 +21,11 @@ Started 2026-10-09 as a spin-off of `../qchem-to-nuclear` (Batch 2). Status: Pha
 
 In:
 - Read `me2j` and `me3j.gz` as written by nuham-jax and NuHamil (formats: nuham-jax
-  `docs/physics-spec.md`, `docs/spec-5d-lab-transform-and-me3j.md`; imsrg++ needs `file3e1max`,
+  [`docs/physics-spec.md`](https://github.com/e-eight/nuham-jax/blob/main/docs/physics-spec.md), [`docs/spec-5d-lab-transform-and-me3j.md`](https://github.com/e-eight/nuham-jax/blob/main/docs/spec-5d-lab-transform-and-me3j.md); imsrg++ needs `file3e1max`,
   `file3e3max`, the same values are needed here).
 - Expand to the m-scheme (proton/neutron orbitals, explicit m) and compute:
   - λ (1-norm) of the one-, two- and three-body parts, in the index convention of the consuming cost
-    model (qchem-to-nuclear `checks/benstead_table2.py`: Benstead's sparse LCU, (pq) ≤ (rs) style
+    model (qchem-to-nuclear [`checks/benstead_table2.py`](https://github.com/e-eight/qchem-to-nuclear/blob/main/checks/benstead_table2.py): Benstead's sparse LCU, (pq) ≤ (rs) style
     upper triangle; to be fixed in Phase 0);
   - nonzero counts, split by sector (pp/pn/nn; PPP/PPN/PNN/NNN) and by pair-M block;
   - max |V|.
@@ -40,15 +40,15 @@ science repos as spot checks).
 
 ## Oracles
 
-- imsrg++ `UnitTest::GetMschemeMatrixElement_1b/_2b/_3b` (`../imsrg/src/UnitTest.cc`): one m-scheme
+- imsrg++ `UnitTest::GetMschemeMatrixElement_1b/_2b/_3b` ([`src/UnitTest.cc`](https://github.com/ragnarstroberg/imsrg/blob/master/src/UnitTest.cc) in ragnarstroberg/imsrg): one m-scheme
   element by recoupling; independent of NuHamil and nuham-jax. Needs a small C++ driver or a
   `pyIMSRG` build (the `imsrg-dev` image has no Python bindings). Random-tuple comparison.
   Also a candidate engine for the 3N sampler, where per-element speed does not matter.
 - Brute force at small emax: explicit Clebsch–Gordan sums, element by element.
-- Structural slot counts from qchem-to-nuclear `checks/count3n.py`, `count3n_scaling.py`:
+- Structural slot counts from qchem-to-nuclear [`checks/count3n.py`](https://github.com/e-eight/qchem-to-nuclear/blob/main/checks/count3n.py), [`count3n_scaling.py`](https://github.com/e-eight/qchem-to-nuclear/blob/main/checks/count3n_scaling.py):
   nonzeros ≤ structural, per block.
 - Exact identities: rotational invariance (M-independence of block sums where it must hold),
-  antisymmetry, hermiticity, symmetry zeros (2–3% of 3N slots, `checks/count3n_scalar.py`).
+  antisymmetry, hermiticity, symmetry zeros (2–3% of 3N slots, [`checks/count3n_scalar.py`](https://github.com/e-eight/qchem-to-nuclear/blob/main/checks/count3n_scalar.py)).
 - Targets, not oracles: Benstead App. B (λ₂B = 5.91e6 MeV, nnz₂B = 5.08e7, λ₃B = 2096 MeV,
   nnz₃B = 2.73e5); disagreement is a finding, not a bug, until shown otherwise.
 

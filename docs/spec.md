@@ -2,8 +2,8 @@
 
 Status: **draft for review** (written 2026-10-09). No code exists. Nothing here is verified numerically
 unless tagged **[V]**. Tags: **[S]** read from a source document, **[D]** derived here and not yet tested,
-**[?]** open. Sources: `../nuhamil-alt/docs/spec-3-lab-transform-me2j.md` (me2j), `spec-5d-lab-transform-and-me3j.md`
-(me3j), `../qchem-to-nuclear/CONVENTIONS.md`, `checks/benstead_table2.py`, and Benstead et al. 2607.21563
+**[?]** open. Sources: [nuham-jax `docs/spec-3-lab-transform-me2j.md`](https://github.com/e-eight/nuham-jax/blob/main/docs/spec-3-lab-transform-me2j.md) (me2j), [`spec-5d-lab-transform-and-me3j.md`](https://github.com/e-eight/nuham-jax/blob/main/docs/spec-5d-lab-transform-and-me3j.md)
+(me3j), [qchem-to-nuclear `CONVENTIONS.md`](https://github.com/e-eight/qchem-to-nuclear/blob/main/CONVENTIONS.md), [`checks/benstead_table2.py`](https://github.com/e-eight/qchem-to-nuclear/blob/main/checks/benstead_table2.py), and Benstead et al. 2607.21563
 (arXiv PDF read 2026-10-09: Eqs. 24–29, App. B.4, Tables VI–XII).
 
 ## 1. Inputs
@@ -72,7 +72,7 @@ a==b pn case and coinciding-orbit triples follow the same argument but need the 
 **Charge dependence is only partly recoverable.** The pn columns are half-sums of pn-basis elements
 (spec-3 §4.4): me_00 and me_10 are ½(T(ap bn|cp dn)+T(an bp|cn dp) ∓ T(ap bn|cn dp) ∓ T(an bp|cp dn)). The file
 cannot separate the two terms in each pair. The m-scheme pn element must follow imsrg++'s
-`Set_pn_TBME_from_iso` (`ReadWrite.cc:928-944`), which assumes charge independence inside each pair.
+`Set_pn_TBME_from_iso` ([`ReadWrite.cc:928-944`](https://github.com/ragnarstroberg/imsrg/blob/master/src/ReadWrite.cc#L928-L944)), which assumes charge independence inside each pair.
 The 3N file is isospin-coupled with no charge dependence at all. So the m-scheme Hamiltonian from these
 files is exactly charge-independent in the 3N part and pn-symmetric in the 2N part. **[?]** Read
 `Set_pn_TBME_from_iso` and confirm in Phase 1. This is not a bug, but any report must say it.
@@ -83,7 +83,7 @@ parity.
 ## 4. Quantities and conventions
 
 ### 4.1 Benstead's definitions, as read from the paper
-- Eq. 1 (via `../nuclear-rank-representation/notes/conventions-sources.md`): H = Σ_{p<q, r<s} V_pqrs a†p a†q a_r a_s,
+- Eq. 1 (via [nrrep `notes/conventions-sources.md`](https://github.com/e-eight/nrrep/blob/main/notes/conventions-sources.md)): H = Σ_{p<q, r<s} V_pqrs a†p a†q a_r a_s,
   restricted sums. V_pqrs is the antisymmetrised normalised element up to a sign from the a_r a_s order,
   which does not change |V| or nnz.
 - Eqs. 24–29: Prep amplitudes √(|V|/λ)·ω with ω² = 2 for (pq)<(rs), 1 for (pq)=(rs), 0 below. So
@@ -110,7 +110,7 @@ T_int, derivation 02 of qchem-to-nuclear), defined in Phase 1. The one-body conv
 one-body done as a QROM" (Benstead) is a consumer choice, not computed here.
 
 **Decision (2026-10-09, user): use T_int.** imsrg++ does the same: `Hbare += Trel_Op` with
-`Trel = KineticEnergy_Op − TCM_Op` (`imsrg_util.cc:743`; `TCM_Op` has the one-body part p²/(2mA) = ½(2n+l+3/2)ħω/A
+`Trel = KineticEnergy_Op − TCM_Op` ([`imsrg_util.cc:743`](https://github.com/ragnarstroberg/imsrg/blob/master/src/imsrg_util/imsrg_util.cc#L743); `TCM_Op` has the one-body part p²/(2mA) = ½(2n+l+3/2)ħω/A
 and a two-body part from T_cm − T_rel). That is T_int = (1−1/A)Σp²/2m − (1/Am)Σ_{i<j}p_i·p_j, with a single
 nucleon mass `M_NUCLEON` (the proton/neutron mass correction is a separate optional operator,
 `nucleon_mass_correction`). **[S]** Consequences: the me2j and me3j files hold V only, so this package must
@@ -146,11 +146,11 @@ That is the first thing the Phase 1 comparison must decide, by computing both an
 for the same files.
 
 Also visible: mean |W| per nonzero is 0.008 MeV, and PPP = NNN has 54 nonzeros in total (11, 11, 3, 1, 1 per
-sign). These are the numbers the 2000× gap rests on (`../qchem-to-nuclear/notes/problem.md`).
+sign). These are the numbers the 2000× gap rests on ([qchem-to-nuclear `notes/problem.md`](https://github.com/e-eight/qchem-to-nuclear/blob/main/notes/problem.md)).
 
 ## 6. Mapping to the consumers
 
-- `checks/benstead_table2.py` takes `LAM` (a single MeV number), `D` (one count), and `N` (660). The spec
+- [`checks/benstead_table2.py`](https://github.com/e-eight/qchem-to-nuclear/blob/main/checks/benstead_table2.py) takes `LAM` (a single MeV number), `D` (one count), and `N` (660). The spec
   maps: `LAM = λ₁+λ₂+λ₃` (convention B), `D = nnz₁+nnz₂+nnz₃` (convention B, one τ), `N = 660`. Its placeholders
   (1e4 MeV one-body λ, one-body nnz ≤ N(N+1)/2 = 218,130) are replaced by Phase 1 output. The script is not
   changed by this package.
