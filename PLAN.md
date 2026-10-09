@@ -3,7 +3,8 @@
 Turns J-coupled nuclear matrix-element files (`me2j`, `me3j`) into the m-scheme quantities that
 fault-tolerant cost models need: 1-norms (λ), nonzero counts, and maximum magnitudes.
 
-Started 2026-10-09 as a spin-off of `../qchem-to-nuclear` (Batch 2). Status: scope only, no code.
+Started 2026-10-09 as a spin-off of `../qchem-to-nuclear` (Batch 2). Status: Phase 0 spec drafted
+(`docs/spec.md`, awaiting review), no code.
 
 ## Why a separate package
 
