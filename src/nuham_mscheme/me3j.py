@@ -221,6 +221,9 @@ class Me3jTuple:
 def read_values3(path: str | Path) -> np.ndarray:
     """Read all values of a text or gzip ``me3j`` file after the one-line header.
 
+    The array is cached per process (keyed on path, size and modification time) and read-only, so
+    the chunks of a sweep handled by one worker parse the file once.
+
     Parameters
     ----------
     path : str or Path
@@ -232,14 +235,32 @@ def read_values3(path: str | Path) -> np.ndarray:
     numpy.ndarray
         Flat float64 array.
     """
-    path = Path(path)
-    with path.open("rb") as fh:
+    path = Path(path).resolve()
+    st = path.stat()
+    return _read_values3(str(path), st.st_size, st.st_mtime_ns)
+
+
+@cache
+def _read_values3(path: str, size: int, mtime_ns: int) -> np.ndarray:
+    del size, mtime_ns  # cache key only
+    with open(path, "rb") as fh:
         magic = fh.read(2)
     opener = _gz.open if magic == b"\x1f\x8b" else open
     with opener(path, "rb") as fh:
         fh.readline()
         raw = fh.read()
-    return _fields(raw).copy().view(f"S{FIELD}").ravel().astype(np.float64)
+    out = _fields(raw).copy().view(f"S{FIELD}").ravel().astype(np.float64)
+    out.setflags(write=False)
+    return out
+
+
+@cache
+def file_plan(
+    emax: int, e2max: int, e3max: int
+) -> tuple[Layout, tuple[tuple[int, int, int, int], ...]]:
+    """Return the layout of a file and its tuples ``(offset, count, bra, ket)`` in file order."""
+    lay = Layout(emax, e2max, e3max)
+    return lay, tuple(kept_intervals(lay, np.ones(len(lay.triples), dtype=bool)))
 
 
 def iter_tuples3(
@@ -282,11 +303,13 @@ def iter_tuples3(
     if use[0] > emax or use[1] > e2max or use[2] > e3max:
         raise ValueError(f"filter {use} exceeds the file limits {(emax, e2max, e3max)}")
     data = read_values3(path)
-    full = Layout(emax, e2max, e3max)
-    if data.size != full.total():
-        raise ValueError(f"{path}: {data.size} values, expected {full.total()} for the limits")
+    full, plan = file_plan(emax, e2max, e3max)
+    if data.size != plan[-1][0] + plan[-1][1]:
+        raise ValueError(
+            f"{path}: {data.size} values, expected {plan[-1][0] + plan[-1][1]} for the limits"
+        )
     keep = keep_mask(full, *use)
-    for k, (off, cnt, bra, ket) in enumerate(kept_intervals(full, np.ones(len(keep), dtype=bool))):
+    for k, (off, cnt, bra, ket) in enumerate(plan):
         if (index_range is not None and not index_range[0] <= k < index_range[1]) or not (
             keep[bra] and keep[ket]
         ):
