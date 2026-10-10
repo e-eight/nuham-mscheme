@@ -26,6 +26,7 @@ from nuham_mscheme.me3j import (
 )
 from nuham_mscheme.mscheme3 import SECTORS3, TripleBasis
 from nuham_mscheme.orbits import orbit_list
+from nuham_mscheme.run2 import require_clean_tree
 from nuham_mscheme.stats2 import TAUS, BlockStats
 from nuham_mscheme.stats3 import ThreeBodyStats
 
@@ -242,6 +243,7 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--out", type=Path, required=True, help="manifest .json to write")
     ap.add_argument("--allow-dirty", action="store_true")
     args = ap.parse_args(argv)
+    require_clean_tree(args.allow_dirty)
     limits = (args.emax, args.e2max, args.e3max)
     use = (
         args.emax if args.emax_use is None else args.emax_use,

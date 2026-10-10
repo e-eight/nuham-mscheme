@@ -100,3 +100,13 @@ def test_manifest_totals_and_provenance(path, tmp_path):
         ]
     )
     assert json.loads(out.read_text())["filters"] == {"emax": 2, "e2max": 2, "e3max": 2}
+
+
+def test_dirty_tree_fails_at_the_start(monkeypatch, tmp_path):
+    """A dirty tree stops the driver before any work, unless --allow-dirty is given."""
+    from nuham_mscheme import run2
+
+    monkeypatch.setattr(run2, "_git", lambda *a: " M file.py")
+    with pytest.raises(RuntimeError, match="dirty"):
+        main(["x.gz", "--emax", "2", "--e2max", "2", "--e3max", "2", "--out", str(tmp_path / "o")])
+    run2.require_clean_tree(True)

@@ -140,7 +140,7 @@ Rough exact cost with the new speed (slot counts extrapolated, the per-slot cost
 | e3max | Slots | One core | This machine (4.7×) |
 |---|---|---|---|
 | 10 | about 6e9 | 17 min | 4 min |
-| 12 | about 4.5e10 | 2 h | 25 min |
+| 12 | about 4.5e10 (measured 5.6e10) | 2 h | 25 min (measured) |
 | 14 | about 2e11 | 9 h | 2 h |
 | 16 | about 7e11 | 33 h | 7 h |
 
@@ -163,6 +163,41 @@ reproduces the previous manifest: identical structural and nonzero counts at eve
 (14, 28, 16) has 13,120 triples and 6.37e9 values; with 256 chunks no chunk reads more than 1.3% of the values, and
 `chunk_rows` takes 2 s. These larger files have not been read yet: the gzip skip, the parse speed (about 160 MB/s of
 text per core) and the per-tuple Python overhead at 4.3e7 tuples are still to be measured.
+
+## Exact sweeps at e3max 9 to 12 (hw30to16)
+
+The source is the LNL hw30to16 file with emax 10, e2max 16, e3max 16 (27.0 GB, on DeltaAI). Cutting it needs only a
+prefix of the stream (`filter_me3j`, run on the DeltaAI login node, not as a batch job). Cuts made there, copied here
+and checked by SHA-256 (each has a `.json` provenance manifest, `count_ok` and the forced-zero check true):
+
+| Cut (emax, e2max, e3max) | Size | Values | Tuples | Cut time |
+|---|---|---|---|---|
+| (10, 16, 10) | 168 MB | not recorded | not recorded | not recorded |
+| (10, 16, 12) | 1.04 GB | 2.73e8 | 2.64e6 | 42 min (reads 5.49e9 source values) |
+
+The e3max 9 and 11 sweeps use filters on the e3max 10 and 12 cuts. e3max 8 from the (10, 16, 10) cut reproduces the
+direct e3max 8 file (`e8_from_e10cut.json`). All sweeps below: 16 workers, `--verify-count`, clean tree, commit
+`c69f815` (e3max 9 to 12), exact, no sampling.
+
+| e3max | Slots (upper triangle) | Nonzero at τ = 5e-9 | λ_ut (MeV) | max \|W\| (MeV) | Wall time | Memory (total / largest process) |
+|---|---|---|---|---|---|---|
+| 8 | 5.27e8 | 5.26e8 | 1.272e6 | 0.4571 | 12 s | |
+| 9 | 1.93e9 | 1.93e9 | 3.310e6 | 0.4571 | not recorded | |
+| 10 | 6.45e9 | 6.44e9 | 8.002e6 | 0.4571 | not recorded | |
+| 11 | 1.98e10 | 1.98e10 | 1.827e7 | 0.4571 | 7.5 min | 4.3 GB / 0.72 GB |
+| 12 | 5.61e10 | 5.61e10 | 3.951e7 | 0.4571 | 25 min | 6.7 GB / 1.6 GB |
+
+- The slot counts follow the earlier extrapolation (1.93e9 and 6.45e9 as predicted; e3max 12 came out 25% above
+  4.5e10). Growth per unit e3max: 3.7, 3.3, 3.07, 2.84. The nonzero fraction at τ = 5e-9 is 99.9% at every e3max: almost
+  every structural slot is nonzero.
+- max |W| does not change above e3max 8. Every element added by a larger e3max is smaller than 0.4571.
+- λ_ut grows more slowly than the slot count (about 2.2 per unit e3max at the top), because the added elements are small.
+- The per-slot cost at e3max 12 is 0.027 µs per slot on 16 threads (25 min for 5.6e10), against 0.023 µs at e3max 8 (12 s for 5.3e8), so the cost per
+  slot has not grown with j so far.
+- Revised exact-cost estimate from the e3max 12 point (slots times 2.8 to 3 per step): e3max 14 about 2.5e11 slots,
+  2 to 2.5 h here; e3max 16 about 9e11, about 8 h. The sources for 14 and 16 (27 to 31 GB) do not fit on this disk
+  (about 32 GB free), so those cuts and sweeps would run on DeltaAI or from a streamed copy.
+- Lesson: the driver checked the dirty tree only when writing the manifest and lost a finished 10 min e3max 11 sweep once.
 
 ## Open
 

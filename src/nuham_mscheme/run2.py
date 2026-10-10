@@ -127,6 +127,12 @@ def _git(*args: str) -> str:
     ).stdout.strip()
 
 
+def require_clean_tree(allow_dirty: bool) -> None:
+    """Raise if the working tree is dirty, so a long run fails at its start, not at the manifest."""
+    if _git("status", "--porcelain") and not allow_dirty:
+        raise RuntimeError("working tree is dirty; commit first or pass allow_dirty (tests only)")
+
+
 def build_manifest(
     path: Path,
     emax: int,
@@ -202,6 +208,7 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--out", type=Path, required=True, help="manifest .json to write")
     ap.add_argument("--allow-dirty", action="store_true")
     args = ap.parse_args(argv)
+    require_clean_tree(args.allow_dirty)
     if args.nmax is not None:
         if args.e_fermi is None or args.emax_use is not None or args.e2max_use is not None:
             ap.error("--nmax needs --e-fermi and excludes --emax-use/--e2max-use")
