@@ -42,7 +42,9 @@ NN behaves like PP. Full tables: run the script above.
    fits PP, PN and the totals together: PN at M₂ = 0 fits τ ≈ 0.035 MeV, PP needs τ ≈ 0.15 for nnz
    and ≈ 0.06 for λ. The PN fit is a coincidence.
 2. **PP and NN have identical nnz in every M₂ block**, and λ(PP) and λ(NN) differ by about 0.1 %.
-   Ours differ by 1.4 % at M₂ = 0 because the files include Coulomb (see Open items).
+   Ours also have identical nnz at τ = 0 (both sectors have the same structural zeros), so this
+   is not evidence of a structural rule, and an earlier version of this note wrongly said it was.
+   Our λ(PP)/λ(NN) differs by 0.3–1 % with or without Coulomb (see the no-Coulomb check below).
 3. **PN M₂ = 17 agrees exactly** (one element, 2.09). It equals half the file's T = 0, J = 17
    value of (8s₁₇/₂)² (−4.184), as the pn state is (|T=0⟩ + |T=1⟩)/√2. This confirms ħω = 16, the
    interaction, and our pn rule in that block.
@@ -59,9 +61,7 @@ or in a different input. It is not explained by a cutoff.
 
 ## Open items
 
-- Coulomb: our files include it. Their pp and nn matrices look nearly charge-symmetric. Not yet
-  tested with a `--no-coulomb` file.
-- Normalisation and column hypotheses on the M₂ = 15, 16 blocks: see the section below.
+- The cause of the PP/NN (and PN M₂ ≤ 16) differences. Next step is the authors.
 
 ## Hypothesis tests on the highest PP blocks (2026-10-09)
 
@@ -80,3 +80,19 @@ Conclusion: none of the tested conversion variants reproduces their nnz pattern.
 element agrees exactly, so the interaction and ħω are not the issue. The cause of the PP/NN
 difference remains unexplained. The open items are the Coulomb question above and asking the
 authors (a question set already exists in qchem-to-nuclear `notes/draft-benstead-questions.md`).
+
+## No-Coulomb check (2026-10-09)
+
+Their pp and nn matrices look nearly charge-symmetric, so I regenerated the emax 8, ħω = 16 file
+with `--no-coulomb` (`runs/out/emax8_hw16_nocoul.json`) and repeated the comparison.
+
+- Totals barely move: nnz_ut 2.653e8 (unchanged), λ_ut 8.505e6 (8.483e6 with Coulomb).
+- PP and NN: nnz equal to the Coulomb file and still 41× (M₂ = 0) to 2× (M₂ = 16) above theirs.
+  λ(M₂ = 0) is 168,602 (PP) and 169,167 (NN) against their 78,180 and 78,126. The per-M₂ λ ratios
+  are the same as before to within 1.3 %.
+- λ(PP)/λ(NN): ours 0.990–0.997 at M₂ = 0, 4, 8, 12, 16; theirs 1.0007, 0.9996, 1.0000, 1.0011 and
+  1.0424. Ours stays about 0.3–1 % below 1 (it is charge-dependence of the N3LO force and the
+  file, not Coulomb); theirs scatters around 1.
+- PN is unchanged (the Coulomb term acts on pp only).
+
+Coulomb is therefore not the cause. The tests above leave the difference unexplained.
