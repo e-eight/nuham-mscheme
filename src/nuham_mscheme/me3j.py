@@ -24,6 +24,11 @@ import numpy as np
 
 from nuham_mscheme.orbits import Orbit, orbit_list
 
+try:  # ISA-L inflates several times faster than zlib; it is an optional dependency ("fast")
+    from isal import igzip as _gz
+except ImportError:
+    _gz = gzip
+
 FIELD = 16
 PER_LINE = 10
 LINE_BYTES = FIELD * PER_LINE + 1
@@ -225,7 +230,7 @@ def filter_me3j(
         ]
     )
     ivs = kept_intervals(lay, keep)
-    opener = gzip.open if str(src).endswith(".gz") else open
+    opener = _gz.open if str(src).endswith(".gz") else open
     wopen = gzip.open if str(dst).endswith(".gz") else open
     # group intervals that share or touch lines, so every line is read once
     groups: list[list[tuple[int, int, int, int]]] = []
