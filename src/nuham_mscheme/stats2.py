@@ -13,8 +13,15 @@ from nuham_mscheme.me2j import Me2jTuple
 from nuham_mscheme.mscheme2 import SECTORS, QuadBlock, TInt, quad_blocks
 from nuham_mscheme.orbits import Orbit
 
-TAUS = (0.0, 5e-9, 1e-6)
-"""Nonzero thresholds: exact, file print precision, imsrg++ read cutoff (docs/spec.md 4.3)."""
+TAUS = (
+    0.0,
+    5e-9,
+    *(m * 10.0**e for e in range(-6, -1) for m in (1, 2, 5)),
+    1e-1,
+)
+"""Nonzero thresholds, ascending: exact, file print precision (5e-9), then a 1-2-5 ladder from 1e-6
+(imsrg++ read cutoff, docs/spec.md 4.3) to 0.1 MeV, to test magnitude cuts against published
+counts."""
 
 PARTS = ("v", "tint", "v+tint")
 """Statistics tracked: the file's V, the two-body T_int alone, and their sum."""
@@ -103,13 +110,15 @@ class _Acc:
         if ax.size == 0:
             return
         self.struct[sector, :, which] += mult * np.bincount(midx, minlength=_NBIN)
-        for i, tau in enumerate(TAUS):
-            self.nnz[sector, :, which, i] += mult * np.bincount(
-                midx, weights=(ax > tau), minlength=_NBIN
-            ).astype(np.int64)
-            self.lam_above[sector, :, which, i] += mult * np.bincount(
-                midx, weights=ax * (ax > tau), minlength=_NBIN
-            )
+        # bin each |V| by how many thresholds lie below it, then cumulate: |V| > TAUS[i] <=> bin > i
+        nt = len(TAUS)
+        key = midx * (nt + 1) + np.searchsorted(np.asarray(TAUS), ax, side="left")
+        size = _NBIN * (nt + 1)
+        cnt = np.bincount(key, minlength=size).reshape(_NBIN, nt + 1)
+        wsum = np.bincount(key, weights=ax, minlength=size).reshape(_NBIN, nt + 1)
+        # tail sums over bins i+1..nt
+        self.nnz[sector, :, which] += mult * np.cumsum(cnt[:, :0:-1], axis=1)[:, ::-1]
+        self.lam_above[sector, :, which] += mult * np.cumsum(wsum[:, :0:-1], axis=1)[:, ::-1]
         self._kahan(sector, midx, which, mult * np.bincount(midx, weights=ax, minlength=_NBIN))
         if which == 0:
             np.maximum.at(self.vmax[sector], midx, ax)
