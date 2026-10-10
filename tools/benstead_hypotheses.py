@@ -72,7 +72,14 @@ def _collision(path: str, lo: int, hi: int) -> tuple[TwoBodyStats, TwoBodyStats]
         first = next(b for b in pn if b.bra_assign == 0 and b.ket_assign == 0)
         st_a._add_block("v", first, first.x, diag)
         summed = QuadBlock(
-            PN, 0, 0, sum(b.x for b in pn), first.mb2, first.mk2, first.valid_b, first.valid_k
+            PN,
+            0,
+            0,
+            np.sum([b.x for b in pn], axis=0),
+            first.mb2,
+            first.mk2,
+            first.valid_b,
+            first.valid_k,
         )
         st_b._add_block("v", summed, summed.x, diag)
     return st_a, st_b
