@@ -37,7 +37,7 @@ NN behaves like PP. Full tables: run the script above.
 ## Findings
 
 1. **Not a magnitude threshold.** A cut can only lower λ, but Benstead's λ exceeds ours for PP at
-   M₂ ≥ 8 (up to 2.6×) and for PN at M₂ ≥ 11, while his nnz is smaller. Their blocks are not a
+   M₂ ≥ 8 (up to 2.6×) and for PN at M₂ ≥ 11, while their nnz is smaller. Their blocks are not a
    subset of ours. The ladder scan (`lambda_ut_above` in the manifests) also finds no single τ that
    fits PP, PN and the totals together: PN at M₂ = 0 fits τ ≈ 0.035 MeV, PP needs τ ≈ 0.15 for nnz
    and ≈ 0.06 for λ. The PN fit is a coincidence.
@@ -96,3 +96,30 @@ with `--no-coulomb` (`runs/out/emax8_hw16_nocoul.json`) and repeated the compari
 - PN is unchanged (the Coulomb term acts on pp only).
 
 Coulomb is therefore not the cause. The tests above leave the difference unexplained.
+
+## Coupled-basis and species-collision tests (2026-10-10)
+
+Script: `uv run python tools/benstead_hypotheses.py runs/inputs/N3LO_EM500_srg2_hw16_emax8_e2max16.me2j.gz`
+(25 s on 16 cores). Ratios are ours / Benstead per M; a fit needs both near 1 in every block.
+
+| Test | Hypothesis | nnz ratio (M = 0 … 16) | λ ratio | Verdict |
+|---|---|---|---|---|
+| 1a pp | their pp elements are J-coupled elements with J = M | 0.05 → 2.2 → 2.0 | 0.05 → 0.5 | rejected |
+| 1b pp | J-coupled elements with J ≥ M | 4.4 → 5.2 → 2.0 | 0.74 → 0.32 → 0.51 | rejected |
+| 1a pn | J-coupled (T = 0 and T = 1 columns), J = M | 0.002 → 0.75 | 0.01 → 0.5 | rejected |
+| 1b pn | J-coupled, J ≥ M | 0.20 → 0.88 | 0.34 → 0.76 | rejected |
+| 2a pn | only the (p, n) species assignment of each orbit-sorted pair is kept | **0.98 (M ≤ 2), 0.94 (M = 8)**, 0.75–0.88 (M ≥ 12) | 0.38 → 0.27 | counts fit at low M, λ does not |
+| 2b pn | all species assignments summed onto that one key | 0.97 (M ≤ 4), 0.94 (M = 8), 0.57–0.88 (M ≥ 12) | 0.64 → 0.30 | counts fit at low M, λ does not |
+
+Both variants give M = 17 exactly (one element, 2.09). Findings:
+
+1. **Incomplete decoupling is ruled out** in both sectors: no assignment of coupled elements to M blocks
+   gives their counts and their λ together.
+2. **The PN count is consistent with a pn pair space that holds one species assignment per orbit-sorted
+   pair**, i.e. pn pairs enumerated like identical-particle pairs (a ≥ b, proton on one fixed orbit). This
+   reproduces their PN nnz to 2–3 % for M ≤ 8, which holds 99 % of their PN nonzeros. It is a
+   bookkeeping hypothesis, not a demonstrated cause: the λ does not follow (their mean |V| per PN nonzero is
+   0.087 MeV against 0.034 in 2a), and the λ ratio drifts with M (0.38 → 0.27), so no constant factor
+   (a missing ½ in the isospin half-sum, or both-triangle λ) fixes it.
+3. **PP and NN stay unexplained.** Their pp pair space would have to be about 6× smaller than ours at low M
+   and nearly the same at the top, with larger elements.
