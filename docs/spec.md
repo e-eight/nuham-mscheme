@@ -1,6 +1,6 @@
 # Phase 0 spec: files, m-scheme convention, λ and nnz
 
-Status: **approved** (user, 2026-10-09). Phase 1 code exists and the two-body parts are verified (imsrg++ oracle, invariance tests). The three-body reader and expansion kernel exist (Phase 2, steps 1–3, 2026-10-10) and pass the invariance tests below; their overall normalisation is not yet checked against an independent code (step 4). Originally: nothing here was verified numerically
+Status: **approved** (user, 2026-10-09). Phase 1 code exists and the two-body parts are verified (imsrg++ oracle, invariance tests). The three-body reader and expansion kernel exist (Phase 2, steps 1–4, 2026-10-10) and pass the invariance tests and the imsrg++ oracle below. Originally: nothing here was verified numerically
 unless tagged **[V]**. Tags: **[S]** read from a source document, **[D]** derived here and not yet tested,
 **[?]** open. Sources: [nuham-jax `docs/spec-3-lab-transform-me2j.md`](https://github.com/e-eight/nuham-jax/blob/main/docs/spec-3-lab-transform-me2j.md) (me2j), [`spec-5d-lab-transform-and-me3j.md`](https://github.com/e-eight/nuham-jax/blob/main/docs/spec-5d-lab-transform-and-me3j.md)
 (me3j), [qchem-to-nuclear `CONVENTIONS.md`](https://github.com/e-eight/qchem-to-nuclear/blob/main/CONVENTIONS.md), [`checks/benstead_table2.py`](https://github.com/e-eight/qchem-to-nuclear/blob/main/checks/benstead_table2.py), and Benstead et al. 2607.21563
@@ -95,11 +95,22 @@ random synthetic files:
   isospin states by a phase that depends only on T, which bra and ket share.
 - Not tested by symmetry: the overall scale of the file values (the factor 6) and the correspondence of the file's
   (J12, T12) coupling labels with ours, because a rescaling or a relabelling of an invariant operator is invariant
-  too. Both need the imsrg++ oracle (step 4).
+  too. These are settled by the imsrg++ oracle, below.
 - `structural` counts the slots inside file tuples (equal parity and a common J), not every M-conserving slot.
 - Check by eye (e3max 4 and 6, hw30to16, τ = 5e-9): PPP = NNN and PPN = PNN in nnz and λ, as charge independence
   demands. At e3max 6: 2.73e7 structural upper-triangle slots, 2.717e7 nonzero, λ_ut 1.41e5 MeV, max |W| 0.457 MeV,
   97 s on one core.
+
+**Three-body kernel against imsrg++, verified (Phase 2 step 4, 2026-10-10) [V].** `tools/imsrg_mscheme_3b.cc` reads
+the same file with `ReadWrite::Read_Darmstadt_3body` and evaluates `UnitTest::GetMschemeMatrixElement_3b` (an
+independent recoupling code that takes the six states in any order). `tests/test_imsrg_oracle3.py` compares random
+elements, stratified over the coincidence pattern of the bra and ket orbit triples (distinct, a==b, b==c, a==b==c: all
+16 combinations), over all four sectors and random M₃, on the LNL hw30to16 file cut to (4, 8, 4), (6, 12, 6) and used
+whole at (8, 16, 8). Result: 2304 elements at (6, 12, 6) and 768 at (8, 16, 8), of which 1890 and 560 exceed 1e-3 MeV:
+maximum difference 3.8e-9 and 7.3e-9 MeV (imsrg++ stores floats), and the ratio of the two values is 1.000000 for every
+element above 1e-2 MeV. So the rule of this section holds for three bodies as written: **no extra normalisation, the
+factor 6 of the file is already the antisymmetrised-state normalisation**, coinciding orbits are handled correctly,
+and the isospin coupling labels and phases are read as the file intends.
 
 Conservation (all exact, used as slot-count filters and as tests): total M (pair M₂, triple M₃), total T_z,
 parity.
@@ -200,7 +211,7 @@ package versions. Results keyed by (body rank, sector, M block).
 
 1. Is the tables' λ column the full sum or the upper-triangle sum (§5)? Decided by computation in Phase 1.
 2. Does `Set_pn_TBME_from_iso` match the pn rule of §3? Read it, then test against imsrg++ `GetMschemeMatrixElement_2b`.
-3. Coinciding-orbit 3N triples and the factor 6: the coinciding-orbit rule passes the J₋/T₋ and antisymmetry tests (§3); the factor 6 is still not isolated numerically (spec-5d open question 1). Needs the imsrg++ 3b oracle (Phase 2, step 4).
+3. Coinciding-orbit 3N triples and the factor 6: the coinciding-orbit rule passes the J₋/T₋ and antisymmetry tests (§3), and the factor 6 is settled by the imsrg++ 3b oracle (ratio 1.000000, §3).
 4. ~~One-body operator~~ Decided: T_int (§4.2). Still open: A and ħω as run inputs, and whether to report the T_int two-body part inside or beside the V part.
 5. Which hbar-omega and file Benstead used is unknown (qchem-to-nuclear assumes 16 MeV). Not needed for the code.
 6. Output layout for nuclear-rank-representation (§6).
