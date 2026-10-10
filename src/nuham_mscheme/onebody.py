@@ -53,10 +53,12 @@ def one_body_stats(orbits: list[Orbit], hw: float, a: int) -> dict[tuple[str, in
                     st.structural_full += 1
                     for k, tau in enumerate(TAUS):
                         st.nnz_full[k] += int(t > tau)
+                        st.lam_above_full[k] += t * (t > tau)
                     if o1 is o2 or o1 == o2:
                         st.structural_diag += 1
                         for k, tau in enumerate(TAUS):
                             st.nnz_diag[k] += int(t > tau)
+                            st.lam_above_diag[k] += t * (t > tau)
                     st.lam_full += t
                     if o1 == o2:
                         st.lam_diag += t

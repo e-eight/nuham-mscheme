@@ -16,6 +16,7 @@ from pathlib import Path
 
 import numpy as np
 
+from nuham_mscheme.filters import matched_cutoffs
 from nuham_mscheme.me2j import iter_tuples, tuple_count
 from nuham_mscheme.mscheme2 import SECTORS, TInt
 from nuham_mscheme.onebody import one_body_stats
@@ -63,6 +64,11 @@ def two_body_stats(
     TwoBodyStats
         The merged statistics.
     """
+    if (emax_use or 0) > emax or (e2max_use or 0) > e2max:
+        raise ValueError(
+            f"filters (emax_use={emax_use}, e2max_use={e2max_use}) exceed the file limits "
+            f"({emax}, {e2max})"
+        )
     n = tuple_count(emax, e2max)
     bounds = np.linspace(0, n, N_CHUNKS + 1).astype(int)
     jobs = [
@@ -90,6 +96,7 @@ def _block_dict(st: BlockStats) -> dict:
         "nnz_full": {str(t): st.nnz_full[i] for i, t in enumerate(TAUS)},
         "nnz_ut": {str(t): st.nnz_ut(i) for i, t in enumerate(TAUS)},
         "nnz_diag": {str(t): st.nnz_diag[i] for i, t in enumerate(TAUS)},
+        "lambda_ut_above": {str(t): st.lambda_above_ut(i) for i, t in enumerate(TAUS)},
         "max_abs": st.vmax,
     }
 
@@ -104,6 +111,10 @@ def _totals(blocks: dict[tuple[str, int], BlockStats]) -> dict:
             "lambda_ut": float(np.sum([b.lambda_ut for b in sel])) if sel else 0.0,
             "nnz_full": {str(t): sum(b.nnz_full[i] for b in sel) for i, t in enumerate(TAUS)},
             "nnz_ut": {str(t): sum(b.nnz_ut(i) for b in sel) for i, t in enumerate(TAUS)},
+            "lambda_ut_above": {
+                str(t): float(np.sum([b.lambda_above_ut(i) for b in sel])) if sel else 0.0
+                for i, t in enumerate(TAUS)
+            },
             "max_abs": max((b.vmax for b in sel), default=0.0),
         }
     return out
@@ -179,12 +190,22 @@ def main(argv: list[str] | None = None) -> None:
     ap.add_argument("--e2max", type=int, required=True, help="e2max of the file")
     ap.add_argument("--emax-use", type=int)
     ap.add_argument("--e2max-use", type=int)
+    ap.add_argument(
+        "--nmax",
+        type=int,
+        help="matched Nmax space (docs/spec.md 5): sets emax-use and e2max-use; needs --e-fermi",
+    )
+    ap.add_argument("--e-fermi", type=int, help="Fermi shell e (0 for 4He, 1 for 16O)")
     ap.add_argument("--hw", type=float, help="hbar*omega in MeV (enables T_int)")
     ap.add_argument("--mass", type=int, help="mass number A (enables T_int)")
     ap.add_argument("--workers", type=int, default=1)
     ap.add_argument("--out", type=Path, required=True, help="manifest .json to write")
     ap.add_argument("--allow-dirty", action="store_true")
     args = ap.parse_args(argv)
+    if args.nmax is not None:
+        if args.e_fermi is None or args.emax_use is not None or args.e2max_use is not None:
+            ap.error("--nmax needs --e-fermi and excludes --emax-use/--e2max-use")
+        args.emax_use, args.e2max_use, _ = matched_cutoffs(args.e_fermi, args.nmax)
     tint = TInt(args.hw, args.mass) if args.hw and args.mass else None
     stats = two_body_stats(
         args.file, args.emax, args.e2max, args.emax_use, args.e2max_use, tint, args.workers

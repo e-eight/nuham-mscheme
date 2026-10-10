@@ -54,3 +54,16 @@ def test_manifest_totals_and_provenance(e4_file):
     assert m["parts"]["v+tint"]["totals"]["all"]["lambda_full"] > v["totals"]["all"]["lambda_full"]
     assert m["one_body_tint"]["totals"]["lambda_full"] > 0
     assert np.isfinite(m["parts"]["tint"]["totals"]["all"]["max_abs"])
+
+
+def test_matched_cutoffs():
+    from nuham_mscheme.filters import matched_cutoffs
+
+    assert matched_cutoffs(0, 6) == (6, 6, 6)
+    assert matched_cutoffs(1, 6) == (7, 8, 9)
+    assert matched_cutoffs(1, 8) == (9, 10, 11)
+
+
+def test_filter_beyond_file_limits_is_an_error(e4_file):
+    with pytest.raises(ValueError, match="exceed"):
+        two_body_stats(e4_file, 4, 8, emax_use=5)

@@ -35,6 +35,9 @@ class BlockStats:
         Elements with |V| > tau for each tau in ``TAUS``.
     lam_full, lam_diag : float
         Sum of |V| over the whole matrix and over the diagonal (compensated sums).
+    lam_above_full, lam_above_diag : list[float]
+        Sum of |V| over the elements with |V| > tau, for each tau in ``TAUS`` (plain sums, a
+        diagnostic for how much 1-norm a magnitude cut would remove).
     vmax : float
         Largest |V|.
     """
@@ -45,6 +48,8 @@ class BlockStats:
     nnz_diag: list[int] = field(default_factory=lambda: [0] * len(TAUS))
     lam_full: float = 0.0
     lam_diag: float = 0.0
+    lam_above_full: list[float] = field(default_factory=lambda: [0.0] * len(TAUS))
+    lam_above_diag: list[float] = field(default_factory=lambda: [0.0] * len(TAUS))
     vmax: float = 0.0
 
     @property
@@ -61,6 +66,10 @@ class BlockStats:
     def lambda_ut(self) -> float:
         """1-norm of the upper triangle including the diagonal, unweighted."""
         return 0.5 * (self.lam_full + self.lam_diag)
+
+    def lambda_above_ut(self, i: int) -> float:
+        """1-norm of the upper-triangle elements with |V| > ``TAUS[i]``."""
+        return 0.5 * (self.lam_above_full[i] + self.lam_above_diag[i])
 
     def nnz_ut(self, i: int) -> int:
         """Nonzeros of the upper triangle including the diagonal at ``TAUS[i]``."""
@@ -79,6 +88,7 @@ class _Acc:
         self.struct = np.zeros(shape + (2,), dtype=np.int64)  # [..., 0] full, [..., 1] diag
         self.nnz = np.zeros(shape + (2, len(TAUS)), dtype=np.int64)
         self.lam = np.zeros(shape + (2,))
+        self.lam_above = np.zeros(shape + (2, len(TAUS)))
         self.comp = np.zeros(shape + (2,))
         self.vmax = np.zeros(shape)
 
@@ -97,6 +107,9 @@ class _Acc:
             self.nnz[sector, :, which, i] += mult * np.bincount(
                 midx, weights=(ax > tau), minlength=_NBIN
             ).astype(np.int64)
+            self.lam_above[sector, :, which, i] += mult * np.bincount(
+                midx, weights=ax * (ax > tau), minlength=_NBIN
+            )
         self._kahan(sector, midx, which, mult * np.bincount(midx, weights=ax, minlength=_NBIN))
         if which == 0:
             np.maximum.at(self.vmax[sector], midx, ax)
@@ -105,6 +118,7 @@ class _Acc:
         """Add another accumulator in place (integer sums exact, 1-norms compensated)."""
         self.struct += other.struct
         self.nnz += other.nnz
+        self.lam_above += other.lam_above
         for sec in range(len(SECTORS)):
             for which in (0, 1):
                 self._kahan(sec, None, which, other.lam[sec, :, which] + other.comp[sec, :, which])
@@ -122,6 +136,8 @@ class _Acc:
                     nnz_diag=[int(v) for v in self.nnz[sec, b, 1]],
                     lam_full=float(self.lam[sec, b, 0] + self.comp[sec, b, 0]),
                     lam_diag=float(self.lam[sec, b, 1] + self.comp[sec, b, 1]),
+                    lam_above_full=[float(v) for v in self.lam_above[sec, b, 0]],
+                    lam_above_diag=[float(v) for v in self.lam_above[sec, b, 1]],
                     vmax=float(self.vmax[sec, b]),
                 )
         return out
