@@ -199,6 +199,23 @@ direct e3max 8 file (`e8_from_e10cut.json`). All sweeps below: 16 workers, `--ve
   (about 32 GB free), so those cuts and sweeps would run on DeltaAI or from a streamed copy.
 - Lesson: the driver checked the dirty tree only when writing the manifest and lost a finished 10 min e3max 11 sweep once.
 
+## Matched Nmax spaces for 16O (e-fermi 1)
+
+`--nmax N --e-fermi 1` sets the filters (`matched_cutoffs`, docs/spec.md 5): N=6 gives (7, 8, 9) and N=8 gives (9, 10, 11).
+Exact sweeps, 16 workers, clean tree, commit `2ac03a7`, upper triangle, convention B:
+
+| Input | N | Filters | Slots | Nonzero at τ = 5e-9 | λ_ut (MeV) | max \|W\| (MeV) | Wall time |
+|---|---|---|---|---|---|---|---|
+| 3N, LNL hw30to16, e3max 12 cut | 6 | (7, 8, 9) | 1.47e9 | 1.47e9 | 2.662e6 | 0.4571 | 38 s |
+| 3N, same cut | 8 | (9, 10, 11) | 1.68e10 | 1.67e10 | 1.612e7 | 0.4571 | 7 min |
+| 2B, N3LO_EM500_srg2 hw16 emax 9 e2max 18 | 8 | (9, 10) | 2.62e7 | 2.62e7 | 1.891e6 | 10.71 | 1.5 min |
+
+Manifests: `runs/out/3n/nmax6_O16_hw30to16.json`, `runs/out/3n/nmax8_O16_hw30to16.json`,
+`runs/out/emax9_hw16_nmax8_O16.json`. The 3N filters need e3max 9 and 11, so the e3max 8 cut cannot give them; both
+come from the e3max 12 cut. Their slot counts are below the full e3max 9 and 11 sweeps (1.93e9, 1.98e10) because emax
+and e2max are cut as well. The 2B run has no T_int (no `--hw`/`--mass`). Only the hw16 emax 9 file was run; the hw20
+and hw24 files were not.
+
 ## Open
 
 - e3max above 8 (Phase 3, the sampler) and the output shape for nuclear-rank-representation, both not decided.
