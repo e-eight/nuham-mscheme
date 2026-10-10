@@ -123,3 +123,36 @@ Both variants give M = 17 exactly (one element, 2.09). Findings:
    (a missing ½ in the isospin half-sum, or both-triangle λ) fixes it.
 3. **PP and NN stay unexplained.** Their pp pair space would have to be about 6× smaller than ours at low M
    and nearly the same at the top, with larger elements.
+
+## Potential scan (2026-10-10)
+
+Nine extra files at ħω = 16, emax 8, e2max 16, made with nuham-jax and expanded at commit `16bb397`
+(`runs/out/potscan/`, about 1 min each; driver script in the session scratchpad, not kept). Compare with
+`uv run python tools/potential_scan.py runs/out/emax8_hw16.json runs/out/potscan/*.json`.
+λ ratios are ours / Benstead (upper triangle).
+
+| Potential, SRG λ (fm⁻¹) | PN M = 17 (theirs 2.09) | λ_ut total | PP ratio M = 0 / 8 / 14 / 16 | PN ratio M = 0 / 8 / 14 / 16 |
+|---|---|---|---|---|
+| EM500 N3LO, 2.0 (baseline) | **2.0920** | 8.48e6 | 2.13 / 0.93 / 0.38 / 0.43 | 1.41 / 1.13 / 0.77 / 0.86 |
+| EM500 N3LO, bare | 1.0554 | 9.41e6 | 2.77 / 0.96 / 0.34 / 0.37 | 1.60 / 1.01 / 0.49 / 0.48 |
+| EM500 N3LO, 1.8 | 2.2128 | 8.08e6 | 2.00 / 0.90 / 0.38 / 0.43 | 1.34 / 1.11 / 0.79 / 0.90 |
+| EM500 N3LO, 2.5 | 1.7995 | 9.03e6 | 2.38 / 0.96 / 0.38 / 0.43 | 1.52 / 1.12 / 0.69 / 0.75 |
+| EM500 N3LO, 3.0 | 1.5581 | 9.24e6 | 2.53 / 0.97 / 0.38 / 0.42 | 1.57 / 1.09 / 0.63 / 0.67 |
+| EMN500 N3LO, 2.0 | 2.1023 | 8.41e6 | 2.10 / 0.91 / 0.38 / 0.43 | 1.38 / 1.15 / 0.77 / 0.86 |
+| EMN500 N4LO, 2.0 | 2.1202 | 8.40e6 | 2.12 / 0.92 / 0.38 / 0.43 | 1.37 / 1.14 / 0.78 / 0.86 |
+| N2LO_opt, 2.0 | 2.0993 | 9.30e6 | 2.77 / 1.03 / 0.39 / 0.44 | 1.46 / 1.17 / 0.77 / 0.86 |
+| N2LO_sat, 2.0 | 2.1663 | 8.41e6 | 2.14 / 0.88 / 0.36 / 0.38 | 1.38 / 1.16 / 0.78 / 0.88 |
+| N3LO Texas, 2.0 | 2.3079 | 7.18e6 | 1.65 / 0.91 / 0.38 / 0.42 | 1.13 / 1.08 / 0.82 / 0.93 |
+
+Also, EM500 at SRG λ 2.0: PN M = 17 is 2.5600 at ħω = 20 and 2.9555 at ħω = 24 (`runs/out/emax8_hw{20,24}.json`).
+
+1. **The count is identical for every potential** (nnz_ut = 2.653e8), as expected: the fill is set by
+   symmetry, not by the force. No potential choice explains their counts.
+2. **No potential brings the per-M λ shape close to theirs.** The high-M PP ratios (0.36–0.44 at M = 14, 16)
+   hardly move across all ten files; the low-M ratios range 1.65–2.77. Their high-M PP λ excess
+   (×2.3–2.6 ours) is independent of the potential.
+3. **The M = 17 element singles out EM500 N3LO, SRG λ = 2.0, ħω = 16 among the files tested.** Their printed
+   2.09 means [2.085, 2.095); only the baseline (2.0920) falls inside. The closest others are N2LO_opt
+   (2.0993) and EMN500 N3LO (2.1023). The element moves by about −0.6 per fm⁻¹ of SRG λ and by about +0.1 per
+   MeV of ħω, so it is direct evidence for ħω ≈ 16 (ħω = 20 would print 2.56). Caveat: one number cannot
+   exclude every combination of untested potential, λ and ħω that happens to give 2.09.
