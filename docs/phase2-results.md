@@ -70,7 +70,50 @@ known; this package cannot say, and the comparison per M₃ block against Tables
 comparison (`docs/benstead-comparison.md`), the question for the authors is which three-body operator and which
 sparsification were used.
 
+## Per M₃ block against Benstead et al. Tables IX–XII
+
+Transcribed into `docs/data/benstead_tables_ix_xii.json` (key 2·M₃, one sign; in the PDF text each caption follows its
+rows). Re-summing them with ±M₃ doubled gives PPN 548.5 + PNN 1546.1 + PPP and NNN 1.1 = 2095.6 MeV and
+81,964 + 191,286 + 108 = 273,358 nonzeros, the published 2096 and 2.73e5. Compare with
+`uv run python tools/compare_benstead3.py runs/out/3n/e8_hw30to16.json` (nnz and λ_ut at τ = 0). Ratios ours / theirs,
+hw30to16 (hw16 differs only in the λ column, by about +4% to +8%):
+
+| 2M₃ | PPN nnz | PPN λ | PNN nnz | PNN λ | PPP nnz |
+|---|---|---|---|---|---|
+| 1 | 2413 | 830 | 1157 | 339 | 4.1e5 |
+| 3 | 2916 | 1141 | 1232 | 380 | 3.3e5 |
+| 5 | 3378 | 1339 | 1305 | 428 | 7.9e5 |
+| 7 | 3988 | 1801 | 1407 | 469 | 1.2e6 |
+| 9 | 4114 | 1820 | 1463 | 515 | 5.3e5 |
+| 11 | 4441 | 1913 | 1587 | 606 | |
+| 13 | 3884 | 1553 | 1497 | 551 | |
+| 15 | 4534 | 2005 | 1727 | 543 | |
+| 17 | 2346 | 1198 | 1173 | 399 | |
+
+NNN equals PPP. Their PPP and NNN λ are 0.00 to 0.13 MeV, so a λ ratio is not meaningful there (ours is 868 to 7520
+MeV).
+
+Findings:
+
+1. **No block is close.** Every block has 340 to 4500 times the 1-norm and 1100 to 4500 times the nonzeros (PPP and
+   NNN: 3e5 to 1e6 times the nonzeros). The ratio is not constant in M₃, so it is not an overall scale or a counting
+   convention (full against upper triangle would be a factor 2).
+2. **Their PPN and PNN blocks differ; ours do not.** Their PNN λ is 2.5 to 3.8 times their PPN λ, and their PNN nnz 2.0
+   to 2.8 times their PPN nnz, in every M₃ block. Their PPP and NNN are equal. An isospin-invariant three-body operator
+   gives PPN = PNN block by block (the T₋ symmetry tested in `tests/test_mscheme3.py`); ours agree to 2 nonzeros in
+   2.4e8. So their three-body operator is charge symmetric (p↔n) but not isospin invariant, and the 3N file used here
+   cannot reproduce that however it is cut.
+3. **Not a magnitude threshold.** Their mean |W| per nonzero is 0.0075 MeV (PPN, M₃ = 1/2: 132.02 / 17,707; PNN:
+   0.0088). The ladder reaches their nonzero count at τ ≈ 0.05 MeV, where the elements left have |W| > 0.05 and our PPN
+   M₃ = 1/2 block still holds 720 MeV (hw16: 910), against their 132. Any cut that leaves as few elements as theirs
+   leaves a larger mean. Their blocks have fewer and smaller elements than a cut of our operator can give.
+4. **Same range of M₃.** Both have blocks up to |M₃| = 17/2 in PPN and PNN, and both fall steeply with M₃.
+
+This is the same kind of disagreement as in two bodies (`docs/benstead-comparison.md`): the counts and norms of their
+tables cannot be reproduced from the LNL file by a cut or a convention. The three-body question for the authors: which
+three-body operator (force, regulator, basis conversion) and which sparsification gave Tables IX–XII, and why PPN and
+PNN differ.
+
 ## Open
 
-- Per-M₃ comparison with Benstead's Tables IX–XII (the manifests hold the blocks).
 - e3max above 8 (Phase 3, the sampler) and the output shape for nuclear-rank-representation, both not decided.

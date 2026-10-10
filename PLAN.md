@@ -5,7 +5,7 @@ fault-tolerant cost models need: 1-norms (λ), nonzero counts, and maximum magni
 
 Started 2026-10-09 as a spin-off of [qchem-to-nuclear](https://github.com/e-eight/qchem-to-nuclear) (Batch 2). Status: Phase 0 spec approved
 (`docs/spec.md`, 2026-10-09); Phase 1 (two-body) done, see `docs/benstead-comparison.md` for the open
-comparison with Benstead's tables; Phase 2 in progress (reader, kernel, tests, imsrg++ oracle and sweep driver done; production sweep at e3max 8 done, see `docs/phase2-results.md`).
+comparison with Benstead's tables; Phase 2 done (see `docs/phase2-results.md`); Phase 3 not started.
 
 ## Why a separate package
 
