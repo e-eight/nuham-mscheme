@@ -18,7 +18,7 @@ M block.
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from functools import cache
+from functools import cache, lru_cache
 
 import numpy as np
 
@@ -83,19 +83,31 @@ class TripleBasis:
         return species, orbit, 2 * (rest - int(self.off[orbit])) - self.orbits[orbit].j2
 
     def triple_rows(self, triple: tuple[int, int, int]) -> "TripleRows":
-        """Return the M-grouped, padded layout of ``triple`` (cached)."""
+        """Return the M-grouped, padded layout of ``triple`` (cached, about 20 bytes per state)."""
         if triple not in self._rows:
-            m2 = self.slot_states(triple, 0).m2
-            m_max = sum(self.orbits[i].j2 for i in triple)
-            slot = (m2 + m_max) // 2
+            orbs = [self.orbits[i] for i in triple]
+            idx = [
+                x.ravel() for x in np.meshgrid(*(np.arange(o.j2 + 1) for o in orbs), indexing="ij")
+            ]
+            m_max = sum(o.j2 for o in orbs)
+            slot = idx[0] + idx[1] + idx[2]  # (2M + m_max) / 2
             order = np.argsort(slot, kind="stable")
             counts = np.bincount(slot, minlength=m_max + 1)
-            pos = np.arange(len(m2)) - (np.cumsum(counts) - counts)[slot[order]]
-            rows = np.full((m_max + 1, int(counts.max())), -1, dtype=np.int64)
+            pos = np.arange(len(slot)) - (np.cumsum(counts) - counts)[slot[order]]
+            rows = np.full((m_max + 1, int(counts.max())), -1, dtype=np.int32)
             rows[slot[order], pos] = order
-            ok = np.stack(
-                [np.append(self.slot_states(triple, a).ok, False)[rows] for a in range(N_ASSIGN)]
-            )
+            ok = np.empty((N_ASSIGN, *rows.shape), dtype=bool)
+            for a in range(N_ASSIGN):
+                sp = [(a >> 2) & 1, (a >> 1) & 1, a & 1]
+                good = np.ones(len(slot) + 1, dtype=bool)
+                good[-1] = False  # padding (row -1)
+                for k in (0, 1):  # slots k, k + 1 hold the same orbit: keep increasing index
+                    if triple[k] == triple[k + 1]:
+                        # same species: m increasing; different species: protons come first
+                        good[:-1] &= (sp[k] < sp[k + 1]) | (
+                            (sp[k] == sp[k + 1]) & (idx[k] < idx[k + 1])
+                        )
+                ok[a] = good[rows]
             self._rows[triple] = TripleRows(m_max, rows, ok)
         return self._rows[triple]
 
@@ -219,7 +231,7 @@ def _spatial(j123: tuple[int, int, int], j12s: tuple[int, ...], js: tuple[int, .
     return out
 
 
-@cache
+@lru_cache(maxsize=20_000)
 def _slots(
     j123: tuple[int, int, int], j456: tuple[int, int, int]
 ) -> tuple[tuple[int, ...], tuple[int, ...], tuple[int, ...], np.ndarray]:
@@ -326,6 +338,29 @@ def _spatial_pad(
     return out
 
 
+@cache
+def _class_spatial(j123: tuple[int, int, int]) -> tuple[tuple[int, ...], np.ndarray]:
+    """Return ``(js, array)``: the spatial coefficients of a j class for every J it can reach.
+
+    ``js`` are the doubled J values ``jmin, jmin + 2, ..., jmax`` over all j12; the array is
+    ``_spatial_pad(j123, j12s, js)``. A tuple takes the J values it needs from it, so the table
+    depends on the triple's j class only, not on its partner (a few hundred tables for a file).
+    """
+    j1, j2, j3 = j123
+    j12s = tuple(range(abs(j1 - j2) // 2, (j1 + j2) // 2 + 1))
+    lo = min(abs(2 * j - j3) for j in j12s)
+    hi = 2 * j12s[-1] + j3
+    js = tuple(range(lo, hi + 1, 2))
+    return js, _spatial_pad(j123, j12s, js)
+
+
+def _take_j(js_all: tuple[int, ...], sp: np.ndarray, js: tuple[int, ...]) -> np.ndarray:
+    """Return the J slices ``js`` of a class table (the table itself if they are all of it)."""
+    if js == js_all:
+        return sp
+    return sp[[(j - js_all[0]) // 2 for j in js]]
+
+
 @dataclass(frozen=True)
 class TupleTensor:
     """All blocks of one file tuple as one padded tensor.
@@ -398,8 +433,10 @@ def tuple_tensor(basis: TripleBasis, tup: Me3jTuple, signed: bool = False) -> Tu
     n_m = m_c + 1
     rows_b = rb.rows[ob : ob + n_m]
     rows_k = rk.rows[ok_ : ok_ + n_m]
-    a = _spatial_pad(j123, j12s, js)[:, rows_b]  # (J, M, rows, j12)
-    bt = _spatial_pad(j456, j45s, js)[:, rows_k].transpose(0, 1, 3, 2)  # (J, M, j45, cols)
+    js_b, sp_b = _class_spatial(j123)
+    js_k, sp_k = _class_spatial(j456)
+    a = _take_j(js_b, sp_b, js)[:, rows_b]  # (J, M, rows, j12)
+    bt = _take_j(js_k, sp_k, js)[:, rows_k].transpose(0, 1, 3, 2)  # (J, M, j45, cols)
     x = np.zeros((len(pb), n_m, rows_b.shape[1], rows_k.shape[1]))
     for y in range(len(js)):
         x += (a[y][None] @ u[:, y, None]) @ bt[y][None]

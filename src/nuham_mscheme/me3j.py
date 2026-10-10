@@ -181,23 +181,42 @@ def keep_mask(layout: Layout, emax: int, e2max: int, e3max: int) -> np.ndarray:
     )
 
 
+@cache
+def _forced_zero_mask(
+    j123: tuple[int, int, int],
+    j456: tuple[int, int, int],
+    ab: bool,
+    de: bool,
+    abc: bool,
+    def_: bool,
+) -> np.ndarray:
+    """Return a boolean per value of a tuple: the entry is forced to zero (docs/spec.md 1.2).
+
+    The flags tell which orbits coincide: ``ab`` a == b, ``de`` d == e, ``abc`` a == b == c,
+    ``def_`` d == e == f.
+    """
+    ent = np.array(list(tuple_entries(j123, j456)), dtype=np.int64).reshape(-1, 6)
+    zero = np.zeros(len(ent), dtype=bool)
+    if ab:
+        zero |= (ent[:, 0] + ent[:, 1]) % 2 == 0
+    if de:
+        zero |= (ent[:, 2] + ent[:, 3]) % 2 == 0
+    if abc and j123[2] < 3:
+        zero |= ent[:, 5] == 3
+    if def_ and j456[2] < 3:
+        zero |= ent[:, 5] == 3
+    zero.setflags(write=False)
+    return zero
+
+
 def _forbidden_ok(layout: Layout, bra: int, ket: int, vals: np.ndarray) -> bool:
     """Return True if the entries forced to zero by the Pauli-type conditions are zero."""
     a, b, c = layout.triples[bra]
     d, e, f = layout.triples[ket]
-    j3, j6 = layout.jkeys[bra][2], layout.jkeys[ket][2]
-    for v, (j12, t12, j45, t45, _jj, tt) in zip(
-        vals, tuple_entries(layout.jkeys[bra], layout.jkeys[ket]), strict=True
-    ):
-        zero = (
-            (a == b and (j12 + t12) % 2 == 0)
-            or (d == e and (j45 + t45) % 2 == 0)
-            or (a == b == c and tt == 3 and j3 < 3)
-            or (d == e == f and tt == 3 and j6 < 3)
-        )
-        if zero and v != 0.0:
-            return False
-    return True
+    mask = _forced_zero_mask(
+        layout.jkeys[bra], layout.jkeys[ket], a == b, d == e, a == b == c, d == e == f
+    )
+    return not np.any(vals[mask] != 0.0)
 
 
 @dataclass(frozen=True)
@@ -255,12 +274,148 @@ def _read_values3(path: str, size: int, mtime_ns: int) -> np.ndarray:
 
 
 @cache
-def file_plan(
-    emax: int, e2max: int, e3max: int
-) -> tuple[Layout, tuple[tuple[int, int, int, int], ...]]:
-    """Return the layout of a file and its tuples ``(offset, count, bra, ket)`` in file order."""
+def row_plan(emax: int, e2max: int, e3max: int) -> tuple[Layout, np.ndarray]:
+    """Return the layout of a file and the value offset of the start of every bra row.
+
+    The file lists the tuples row by row: bra triple ``i`` with all its kets ``k <= i``. The array
+    has ``n_triples + 1`` entries; the last is the number of values of the file.
+    """
     lay = Layout(emax, e2max, e3max)
-    return lay, tuple(kept_intervals(lay, np.ones(len(lay.triples), dtype=bool)))
+    base = np.zeros(len(lay.triples) + 1, dtype=np.int64)
+    for i in range(len(lay.triples)):
+        base[i + 1] = base[i] + lay.row(i).sum()
+    base.setflags(write=False)
+    return lay, base
+
+
+def _parse(raw: bytes) -> np.ndarray:
+    """Parse raw ``10f16.8`` text lines into a float64 array."""
+    return _fields(raw).copy().view(f"S{FIELD}").ravel().astype(np.float64)
+
+
+class ValueReader:
+    """Reads ranges of the values of a text or gzip ``me3j`` file without loading it all.
+
+    Ranges are requested by value index (position in the file after the header line). A request
+    that continues the previous one is served from a buffer; one that jumps ahead or back seeks,
+    which in a gzip stream means decompressing from the start (or forward) without parsing. At most
+    one block of ``block_lines`` lines beyond the requested range is held.
+
+    Parameters
+    ----------
+    path : str or Path
+        The file; gzip is detected from the magic bytes.
+    block_lines : int
+        Lines read at a time (default 100,000, about 16 MB of text).
+    """
+
+    def __init__(self, path: str | Path, block_lines: int = 100_000) -> None:
+        self.path = Path(path)
+        with self.path.open("rb") as fh:
+            magic = fh.read(2)
+        opener = _gz.open if magic == b"\x1f\x8b" else open
+        self._opener = opener
+        self._open()
+        self._block = block_lines
+        self._buf = np.empty(0)
+        self._b0 = 0
+        self._valid = True  # the file position follows the buffer
+
+    def _open(self) -> None:
+        self._f = self._opener(self.path, "rb")
+        self._hlen = len(self._f.readline())
+
+    def close(self) -> None:
+        """Close the file."""
+        self._f.close()
+
+    def __enter__(self) -> "ValueReader":
+        """Return the reader."""
+        return self
+
+    def __exit__(self, *exc: object) -> None:
+        """Close the file."""
+        self.close()
+
+    def _seek_line(self, line: int) -> None:
+        target = self._hlen + line * LINE_BYTES
+        if target < self._f.tell():  # the gzip stream only moves forward: start again
+            self._f.close()
+            self._open()
+        self._f.seek(target)
+        self._buf = np.empty(0)
+        self._b0 = line * PER_LINE
+        self._valid = True
+
+    def get(self, v0: int, v1: int) -> np.ndarray:
+        """Return the values with indices ``v0 <= v < v1`` (a view valid until the next call).
+
+        Raises
+        ------
+        EOFError
+            If the file ends before ``v1``.
+        """
+        end = self._b0 + len(self._buf)
+        if not self._valid or v0 < self._b0 or v0 >= end:
+            self._seek_line(v0 // PER_LINE)
+        elif v0 > self._b0:
+            self._buf = self._buf[v0 - self._b0 :]
+            self._b0 = v0
+        pieces = [self._buf]
+        have = len(self._buf)
+        while self._b0 + have < v1:
+            lines = max(self._block, -(-(v1 - self._b0 - have) // PER_LINE))
+            raw = self._f.read(lines * LINE_BYTES)
+            if not raw:
+                raise EOFError(f"{self.path}: ends before value {v1}")
+            vals = _parse(raw)
+            pieces.append(vals)
+            have += len(vals)
+        if len(pieces) > 1:
+            self._buf = np.concatenate(pieces)
+        return self._buf[v0 - self._b0 : v1 - self._b0]
+
+    def check_end(self, total: int) -> None:
+        """Check that the file holds exactly ``total`` values (reads to the end of the stream).
+
+        Raises
+        ------
+        ValueError
+            If there are more or fewer values.
+        """
+        self._seek_line(total // PER_LINE)
+        self._valid = False
+        rest = self._f.read()
+        tail = total % PER_LINE
+        if len(rest.rstrip(b"\n")) != tail * FIELD or rest.count(b"\n") > 1:
+            raise ValueError(f"{self.path}: more values than the {total} expected for the limits")
+
+
+def file_value_count(path: str | Path) -> int:
+    """Return the number of values of a ``me3j`` file by reading the stream once.
+
+    Decompression only (about 800 MB/s with ISA-L); the lines are assumed to be ``10f16.8``.
+
+    Raises
+    ------
+    ValueError
+        If the length is not whole lines of ten 16-character fields plus a final partial line.
+    """
+    path = Path(path)
+    with path.open("rb") as fh:
+        magic = fh.read(2)
+    opener = _gz.open if magic == b"\x1f\x8b" else open
+    size = 0
+    with opener(path, "rb") as f:
+        f.readline()
+        while chunk := f.read(1 << 26):
+            size += len(chunk)
+    full, rem = divmod(size, LINE_BYTES)
+    if rem and not ((rem - 1) % FIELD == 0 or rem % FIELD == 0):
+        raise ValueError(
+            f"{path}: {rem} bytes after the last full line is not a whole number of fields"
+        )
+    return full * PER_LINE + (rem - (rem % FIELD == 1)) // FIELD if rem else full * PER_LINE
 
 
 def iter_tuples3(
@@ -269,9 +424,13 @@ def iter_tuples3(
     e2max: int,
     e3max: int,
     use_limits: tuple[int, int, int] | None = None,
-    index_range: tuple[int, int] | None = None,
+    row_range: tuple[int, int] | None = None,
+    reader: ValueReader | None = None,
 ) -> Iterator[Me3jTuple]:
-    """Yield the orbit-triple pairs of a file with their values, checking the value count.
+    """Yield the orbit-triple pairs of a file with their values, reading the file as a stream.
+
+    Only the values of the requested rows are read (the rest of a gzip stream is skipped by
+    decompressing). The total value count is checked when the range reaches the last row.
 
     Parameters
     ----------
@@ -281,9 +440,12 @@ def iter_tuples3(
         Limits the file was written with (``e3max <= e2max``).
     use_limits : tuple[int, int, int], optional
         ``(emax, e2max, e3max)`` filter applied on the fly (inclusive), not above the file's.
-    index_range : tuple[int, int], optional
-        Half-open range of positions in the file's tuple sequence (before filtering), to split a
-        file into fixed chunks; the whole value count is still checked.
+    row_range : tuple[int, int], optional
+        Half-open range of bra rows (positions in the triple list of ``Layout``), to split a file
+        into fixed chunks.
+    reader : ValueReader, optional
+        An open reader to continue from (for consecutive chunks in one process); otherwise the file
+        is opened here.
 
     Yields
     ------
@@ -302,22 +464,38 @@ def iter_tuples3(
     use = (emax, e2max, e3max) if use_limits is None else use_limits
     if use[0] > emax or use[1] > e2max or use[2] > e3max:
         raise ValueError(f"filter {use} exceeds the file limits {(emax, e2max, e3max)}")
-    data = read_values3(path)
-    full, plan = file_plan(emax, e2max, e3max)
-    if data.size != plan[-1][0] + plan[-1][1]:
-        raise ValueError(
-            f"{path}: {data.size} values, expected {plan[-1][0] + plan[-1][1]} for the limits"
-        )
-    keep = keep_mask(full, *use)
-    for k, (off, cnt, bra, ket) in enumerate(plan):
-        if (index_range is not None and not index_range[0] <= k < index_range[1]) or not (
-            keep[bra] and keep[ket]
-        ):
-            continue
-        vals = data[off : off + cnt]
-        if not _forbidden_ok(full, bra, ket, vals):
-            raise RuntimeError(f"nonzero at a forced-zero entry, tuple ({bra}, {ket})")
-        yield Me3jTuple(full.triples[bra], full.triples[ket], vals)
+    lay, base = row_plan(emax, e2max, e3max)
+    keep = keep_mask(lay, *use)
+    n = len(lay.triples)
+    lo, hi = (0, n) if row_range is None else row_range
+    rd = ValueReader(path) if reader is None else reader
+    try:
+        for i in range(lo, hi):
+            if not keep[i]:
+                continue
+            counts = lay.row(i)
+            kets = np.flatnonzero(keep[: i + 1] & (counts > 0))
+            offs = base[i] + np.cumsum(counts) - counts
+            for k in kets:
+                try:
+                    vals = rd.get(int(offs[k]), int(offs[k] + counts[k]))
+                except EOFError:
+                    raise ValueError(
+                        f"{path}: fewer values, expected {int(base[n])} for the limits"
+                    ) from None
+                if not _forbidden_ok(lay, i, int(k), vals):
+                    raise RuntimeError(f"nonzero at a forced-zero entry, tuple ({i}, {k})")
+                yield Me3jTuple(lay.triples[i], lay.triples[int(k)], vals)
+        if hi == n:
+            try:
+                rd.check_end(int(base[n]))
+            except ValueError:
+                raise ValueError(
+                    f"{path}: extra values, expected {int(base[n])} for the limits"
+                ) from None
+    finally:
+        if reader is None:
+            rd.close()
 
 
 def filter_me3j(

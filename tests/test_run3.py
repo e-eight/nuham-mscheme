@@ -8,7 +8,7 @@ import pytest
 from test_me3j import _text
 
 from nuham_mscheme.me3j import filter_me3j
-from nuham_mscheme.run3 import build_manifest, chunk_bounds, main, three_body_stats
+from nuham_mscheme.run3 import build_manifest, chunk_rows, main, three_body_stats
 
 LIMITS = (3, 6, 6)
 
@@ -34,12 +34,11 @@ def _same(a, b, exact: bool) -> None:
             assert ba[k].vmax == bb[k].vmax
 
 
-def test_chunk_bounds_partition_and_balance():
-    b = chunk_bounds(LIMITS, LIMITS, 16)
+def test_chunk_rows_partition():
+    b = chunk_rows(LIMITS, LIMITS, 16)
     assert b[0] == 0 and b == sorted(b) and len(b) == 17
-    assert chunk_bounds(LIMITS, LIMITS, 16) == b
-    # removed tuples carry no weight: the filtered split has fewer tuples per chunk on average
-    assert chunk_bounds(LIMITS, (2, 4, 4), 16)[-1] == b[-1]
+    assert chunk_rows(LIMITS, LIMITS, 16) == b
+    assert chunk_rows(LIMITS, (2, 4, 4), 16)[-1] == b[-1]  # the whole file is covered
 
 
 def test_workers_do_not_change_result(path):

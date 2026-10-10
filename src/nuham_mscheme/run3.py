@@ -17,7 +17,13 @@ from pathlib import Path
 import numpy as np
 
 from nuham_mscheme.filters import matched_cutoffs
-from nuham_mscheme.me3j import file_plan, iter_tuples3, keep_mask
+from nuham_mscheme.me3j import (
+    ValueReader,
+    file_value_count,
+    iter_tuples3,
+    keep_mask,
+    row_plan,
+)
 from nuham_mscheme.mscheme3 import SECTORS3, TripleBasis
 from nuham_mscheme.orbits import orbit_list
 from nuham_mscheme.stats2 import TAUS, BlockStats
@@ -26,14 +32,14 @@ from nuham_mscheme.stats3 import ThreeBodyStats
 N_CHUNKS = 256
 
 
-def chunk_bounds(
+def chunk_rows(
     limits: tuple[int, int, int], use: tuple[int, int, int], n_chunks: int = N_CHUNKS
 ) -> list[int]:
-    """Return ``n_chunks + 1`` positions that split the file's tuple sequence into equal-cost parts.
+    """Return ``n_chunks + 1`` bra-row positions that split the file into equal-cost chunks.
 
-    The cost of a tuple is estimated by its number of product states, ``prod(2j+1)`` of the bra
-    times that of the ket, and is zero for tuples removed by the filter. The result depends only on
-    the limits, not on the number of workers.
+    The file lists its tuples row by row (bra triple with all its kets). The cost of a row is
+    estimated by the number of product states of its bra times those of its kets, and is zero for
+    rows removed by the filter. The result depends only on the limits, not on the number of workers.
 
     Parameters
     ----------
@@ -44,24 +50,32 @@ def chunk_bounds(
     n_chunks : int
         Number of chunks.
     """
-    lay, plan = file_plan(*limits)
+    lay, _ = row_plan(*limits)
     keep = keep_mask(lay, *use)
     dims = np.array(
         [np.prod([lay.orbits[i].j2 + 1 for i in t]) for t in lay.triples], dtype=np.float64
     )
-    w = np.array([dims[b] * dims[k] if keep[b] and keep[k] else 0.0 for _, _, b, k in plan])
-    c = np.cumsum(w)
-    inner = np.searchsorted(c, np.linspace(0.0, c[-1], n_chunks + 1)[1:-1], side="left")
-    return [0, *np.maximum.accumulate(inner).tolist(), len(plan)]
+    cost = np.zeros(len(dims))
+    for i in np.flatnonzero(keep):
+        sel = (lay.row(int(i)) > 0) & keep[: i + 1]
+        cost[i] = dims[i] * dims[: i + 1][sel].sum()
+    c = np.cumsum(cost)
+    inner = np.searchsorted(c, np.linspace(0.0, c[-1], n_chunks + 1)[1:-1], side="right")
+    return [0, *np.maximum.accumulate(inner).tolist(), len(dims)]
 
 
-def _chunk_job(args: tuple) -> ThreeBodyStats:
-    path, limits, use, lo, hi = args
-    basis = TripleBasis(orbit_list(use[0]))
-    stats = ThreeBodyStats(basis)
-    for tup in iter_tuples3(path, *limits, use_limits=use, index_range=(lo, hi)):
-        stats.add_tuple(tup)
-    return stats
+def _group_job(args: tuple) -> list[ThreeBodyStats]:
+    path, limits, use, ranges = args
+    out = []
+    with ValueReader(path) as reader:
+        for lo, hi in ranges:
+            stats = ThreeBodyStats(TripleBasis(orbit_list(use[0])))
+            for tup in iter_tuples3(
+                path, *limits, use_limits=use, row_range=(lo, hi), reader=reader
+            ):
+                stats.add_tuple(tup)
+            out.append(stats)
+    return out
 
 
 def three_body_stats(
@@ -72,6 +86,9 @@ def three_body_stats(
     n_chunks: int = N_CHUNKS,
 ) -> ThreeBodyStats:
     """Reduce a file to its three-body statistics.
+
+    The file is read as a stream: each worker takes a run of consecutive chunks, skips to its first
+    row and reads on, so the file is never held in memory.
 
     Parameters
     ----------
@@ -94,20 +111,24 @@ def three_body_stats(
     use = limits if use is None else use
     if any(u > f for u, f in zip(use, limits, strict=True)):
         raise ValueError(f"filters {use} exceed the file limits {limits}")
-    bounds = chunk_bounds(limits, use, n_chunks)
+    bounds = chunk_rows(limits, use, n_chunks)
+    chunks = [(lo, hi) for lo, hi in zip(bounds[:-1], bounds[1:], strict=True)]
+    n_groups = 1 if workers <= 1 else min(len(chunks), 2 * workers)
+    cuts = np.linspace(0, len(chunks), n_groups + 1).astype(int)
     jobs = [
-        (str(path), limits, use, lo, hi)
-        for lo, hi in zip(bounds[:-1], bounds[1:], strict=True)
-        if hi > lo
+        (str(path), limits, use, chunks[a:b])
+        for a, b in zip(cuts[:-1], cuts[1:], strict=True)
+        if b > a
     ]
     total = ThreeBodyStats(TripleBasis(orbit_list(use[0])))
     if workers <= 1:
-        for part in map(_chunk_job, jobs):
-            total.merge(part)
+        results = list(map(_group_job, jobs))
     else:
         with ProcessPoolExecutor(max_workers=workers) as pool:
-            for part in pool.map(_chunk_job, jobs):
-                total.merge(part)
+            results = list(pool.map(_group_job, jobs))
+    for group in results:
+        for part in group:  # chunk order, whatever the grouping
+            total.merge(part)
     return total
 
 
@@ -213,6 +234,11 @@ def main(argv: list[str] | None = None) -> None:
     )
     ap.add_argument("--e-fermi", type=int, help="Fermi shell e (0 for 4He, 1 for 16O)")
     ap.add_argument("--workers", type=int, default=1)
+    ap.add_argument(
+        "--verify-count",
+        action="store_true",
+        help="first read the whole stream once to check the value count (decompression only)",
+    )
     ap.add_argument("--out", type=Path, required=True, help="manifest .json to write")
     ap.add_argument("--allow-dirty", action="store_true")
     args = ap.parse_args(argv)
@@ -228,6 +254,11 @@ def main(argv: list[str] | None = None) -> None:
         ):
             ap.error("--nmax needs --e-fermi and excludes the --*-use options")
         use = matched_cutoffs(args.e_fermi, args.nmax)
+    if args.verify_count:
+        expected = row_plan(*limits)[1][-1]
+        have = file_value_count(args.file)
+        if have != expected:
+            ap.error(f"{args.file} holds {have} values, expected {expected} for the limits")
     stats = three_body_stats(args.file, limits, use, args.workers)
     manifest = build_manifest(args.file, limits, use, stats, args.allow_dirty)
     args.out.parent.mkdir(parents=True, exist_ok=True)

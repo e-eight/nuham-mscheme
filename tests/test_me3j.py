@@ -8,7 +8,16 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from nuham_mscheme.me3j import count_values, filter_me3j, iter_tuples3, read_values3, tuple_entries
+from nuham_mscheme.me3j import (
+    ValueReader,
+    count_values,
+    file_value_count,
+    filter_me3j,
+    iter_tuples3,
+    read_values3,
+    row_plan,
+    tuple_entries,
+)
 from nuham_mscheme.orbits import orbit_list
 
 HEADER = "NNN int. calculated by test\n"
@@ -166,19 +175,74 @@ def test_reader_chunks_partition_the_file(tmp_path: Path):
     path = tmp_path / "t.me3j"
     path.write_bytes(_text(3, 6, 6))
     whole = [(t.bra, t.ket) for t in iter_tuples3(path, 3, 6, 6)]
-    n = len(whole)
+    n = len(row_plan(3, 6, 6)[0].triples)
     parts = [
         (t.bra, t.ket)
         for lo, hi in [(0, n // 3), (n // 3, 2 * n // 3), (2 * n // 3, n)]
-        for t in iter_tuples3(path, 3, 6, 6, index_range=(lo, hi))
+        for t in iter_tuples3(path, 3, 6, 6, row_range=(lo, hi))
     ]
     assert parts == whole
 
 
-def test_reader_rejects_a_wrong_count_and_a_filter_beyond_the_file(tmp_path: Path):
+@pytest.mark.parametrize("gz", [False, True])
+def test_value_reader_ranges_equal_the_whole_file(tmp_path: Path, gz: bool):
+    """Random ranges, forward, backward and across blocks, in text and gzip, with tiny blocks."""
+    text = _text(3, 6, 6)
+    path = tmp_path / ("t.me3j.gz" if gz else "t.me3j")
+    path.write_bytes(gzip.compress(text) if gz else text)
+    expected = np.array([float(x) for x in text.decode().split()[len(HEADER.split()) :]])
+    rng = np.random.default_rng(5)
+    with ValueReader(path, block_lines=7) as rd:
+        # sequential requests that continue each other, ending with the partial last line
+        pos = 0
+        while pos < len(expected):
+            n = int(rng.integers(1, 40))
+            assert np.array_equal(rd.get(pos, min(pos + n, len(expected))), expected[pos : pos + n])
+            pos += n
+        # jumps in both directions
+        for _ in range(40):
+            v0 = int(rng.integers(0, len(expected) - 1))
+            v1 = int(rng.integers(v0 + 1, min(v0 + 200, len(expected)) + 1))
+            assert np.array_equal(rd.get(v0, v1), expected[v0:v1])
+        with pytest.raises(EOFError):
+            rd.get(len(expected) - 3, len(expected) + 5)
+        rd.check_end(len(expected))
+        with pytest.raises(ValueError, match="more values"):
+            rd.check_end(len(expected) - 4)
+
+
+def test_file_value_count(tmp_path: Path):
+    for lim in [(3, 6, 6), (4, 8, 4)]:
+        path = tmp_path / "t.me3j.gz"
+        path.write_bytes(gzip.compress(_text(*lim)))
+        assert file_value_count(path) == count_values(*lim)
+
+
+def test_streaming_reader_matches_the_cached_reader(tmp_path: Path):
     path = tmp_path / "t.me3j"
-    path.write_bytes(_text(3, 6, 6))
-    with pytest.raises(ValueError, match="values, expected"):
+    path.write_bytes(_text(4, 8, 8))
+    whole = read_values3(path)
+    pos = 0
+    for t in iter_tuples3(path, 4, 8, 8):
+        assert np.array_equal(t.values, whole[pos : pos + len(t.values)])
+        pos += len(t.values)
+    assert pos == len(whole)
+
+
+def test_reader_rejects_a_wrong_limit_a_wrong_count_and_a_filter_beyond_the_file(tmp_path: Path):
+    path = tmp_path / "t.me3j"
+    text = _text(3, 6, 6)
+    path.write_bytes(text)
+    # a wrong limit misaligns the stream: caught by the forced zeros or by the value count
+    with pytest.raises((ValueError, RuntimeError)):
         list(iter_tuples3(path, 3, 6, 5))
     with pytest.raises(ValueError, match="exceeds"):
         list(iter_tuples3(path, 3, 6, 6, use_limits=(3, 6, 7)))
+    # values appended / missing at the end are caught by the value count
+    more, fewer = tmp_path / "more.me3j", tmp_path / "fewer.me3j"
+    more.write_bytes(text + b"      0.00000000      0.00000000\n")
+    fewer.write_bytes(text[:-33])
+    with pytest.raises(ValueError, match="extra values, expected"):
+        list(iter_tuples3(more, 3, 6, 6))
+    with pytest.raises(ValueError, match="fewer values, expected"):
+        list(iter_tuples3(fewer, 3, 6, 6))

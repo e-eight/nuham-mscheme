@@ -144,6 +144,26 @@ Rough exact cost with the new speed (slot counts extrapolated, the per-slot cost
 | 14 | about 2e11 | 9 h | 2 h |
 | 16 | about 7e11 | 33 h | 7 h |
 
+## Streaming reader for big files
+
+`iter_tuples3` no longer loads the file. A `ValueReader` (`me3j.py`) returns the values of the requested range
+(value index `v0..v1`), buffers sequential requests, and seeks otherwise: forward in a gzip stream means
+decompressing without parsing (ISA-L, about 800 MB/s), and a backward seek reopens the file. A chunk is a range of bra
+rows (the file is written row by row: bra triple with all kets); `chunk_rows` splits the file into 256 chunks of equal
+estimated cost, and each worker takes a run of consecutive chunks, skips to its first row once and reads on. The result
+is a list of per-chunk statistics merged in chunk order, so it does not depend on the worker count. The value count is
+checked at the end of the stream (`check_end`), a wrong limit is caught by the forced-zero entries, and
+`--verify-count` first reads the whole stream once (decompression only) to compare with the layout. Caches that grew
+with the file are bounded: the spatial coefficients now depend on the j class only (a few hundred tables), the
+per-triple state tables take about 20 bytes per state, and the tuple index tables are an LRU cache.
+
+At e3max 8 the sweep (hw30to16) takes 12 s on 16 threads including `--verify-count`, 0.27 GB per process, and
+reproduces the previous manifest: identical structural and nonzero counts at every τ including τ = 0, 1-norms to
+2.2e-16. Layouts of the larger files (`row_plan`, `chunk_rows`): (10, 20, 12) has 3,344 triples and 2.73e8 values,
+(14, 28, 16) has 13,120 triples and 6.37e9 values; with 256 chunks no chunk reads more than 1.3% of the values, and
+`chunk_rows` takes 2 s. These larger files have not been read yet: the gzip skip, the parse speed (about 160 MB/s of
+text per core) and the per-tuple Python overhead at 4.3e7 tuples are still to be measured.
+
 ## Open
 
 - e3max above 8 (Phase 3, the sampler) and the output shape for nuclear-rank-representation, both not decided.
