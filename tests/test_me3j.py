@@ -5,9 +5,10 @@ import zlib
 from functools import cache
 from pathlib import Path
 
+import numpy as np
 import pytest
 
-from nuham_mscheme.me3j import count_values, filter_me3j
+from nuham_mscheme.me3j import count_values, filter_me3j, iter_tuples3, read_values3, tuple_entries
 from nuham_mscheme.orbits import orbit_list
 
 HEADER = "NNN int. calculated by test\n"
@@ -123,3 +124,61 @@ def test_misaligned_stream_is_detected(tmp_path: Path):
     src.write_text(text)
     with pytest.raises(RuntimeError, match="forced-zero"):
         filter_me3j(src, dst, (6, 6), (3, 6, 6))
+
+
+def test_reader_returns_the_values_in_file_order(tmp_path: Path):
+    path = tmp_path / "t.me3j"
+    path.write_bytes(_text(4, 8, 8))
+    expected = np.array([float(x) for x in _text(4, 8, 8).decode().split()[len(HEADER.split()) :]])
+    assert np.array_equal(read_values3(path), expected)
+    tuples = list(iter_tuples3(path, 4, 8, 8))
+    assert np.array_equal(np.concatenate([t.values for t in tuples]), expected)
+    for t, ((bra, ket), _) in zip(tuples, _tuple_keys(4, 8, 8), strict=True):
+        assert (t.bra, t.ket) == (bra, ket)
+    assert all(len(t.values) == len(list(tuple_entries(_j(t.bra), _j(t.ket)))) for t in tuples)
+
+
+def _j(triple):
+    return tuple(ORBITS[i].j2 for i in triple)
+
+
+def _tuple_keys(emax: int, e2max: int, e3max: int):
+    """Distinct (bra, ket) triples in file order, from the independent loop port."""
+    last = None
+    for key, entry in _loop(emax, e2max, e3max):
+        k = (key[:3], key[3:])
+        if k != last:
+            last = k
+            yield k, entry
+
+
+def test_reader_filter_equals_reading_the_filtered_file(tmp_path: Path):
+    big, small = tmp_path / "big.me3j", tmp_path / "small.me3j"
+    big.write_bytes(_text(4, 8, 8))
+    small.write_bytes(_text(3, 6, 5))
+    a = list(iter_tuples3(big, 4, 8, 8, use_limits=(3, 6, 5)))
+    b = list(iter_tuples3(small, 3, 6, 5))
+    assert [(t.bra, t.ket) for t in a] == [(t.bra, t.ket) for t in b]
+    assert all(np.array_equal(x.values, y.values) for x, y in zip(a, b, strict=True))
+
+
+def test_reader_chunks_partition_the_file(tmp_path: Path):
+    path = tmp_path / "t.me3j"
+    path.write_bytes(_text(3, 6, 6))
+    whole = [(t.bra, t.ket) for t in iter_tuples3(path, 3, 6, 6)]
+    n = len(whole)
+    parts = [
+        (t.bra, t.ket)
+        for lo, hi in [(0, n // 3), (n // 3, 2 * n // 3), (2 * n // 3, n)]
+        for t in iter_tuples3(path, 3, 6, 6, index_range=(lo, hi))
+    ]
+    assert parts == whole
+
+
+def test_reader_rejects_a_wrong_count_and_a_filter_beyond_the_file(tmp_path: Path):
+    path = tmp_path / "t.me3j"
+    path.write_bytes(_text(3, 6, 6))
+    with pytest.raises(ValueError, match="values, expected"):
+        list(iter_tuples3(path, 3, 6, 5))
+    with pytest.raises(ValueError, match="exceeds"):
+        list(iter_tuples3(path, 3, 6, 6, use_limits=(3, 6, 7)))

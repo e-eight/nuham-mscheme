@@ -15,6 +15,7 @@ import json
 import subprocess
 import sys
 from collections.abc import Iterator
+from dataclasses import dataclass
 from datetime import date
 from functools import cache
 from pathlib import Path
@@ -166,6 +167,20 @@ def kept_intervals(layout: Layout, keep: np.ndarray) -> list[tuple[int, int, int
     return out
 
 
+def keep_mask(layout: Layout, emax: int, e2max: int, e3max: int) -> np.ndarray:
+    """Return a boolean per triple of ``layout``: it satisfies ``(emax, e2max, e3max)``."""
+    orb = layout.orbits
+    return np.array(
+        [
+            all(orb[x].e <= emax for x in t)
+            and max(orb[t[0]].e + orb[t[1]].e, orb[t[0]].e + orb[t[2]].e, orb[t[1]].e + orb[t[2]].e)
+            <= e2max
+            and sum(orb[x].e for x in t) <= e3max
+            for t in layout.triples
+        ]
+    )
+
+
 def _forbidden_ok(layout: Layout, bra: int, ket: int, vals: np.ndarray) -> bool:
     """Return True if the entries forced to zero by the Pauli-type conditions are zero."""
     a, b, c = layout.triples[bra]
@@ -183,6 +198,103 @@ def _forbidden_ok(layout: Layout, bra: int, ket: int, vals: np.ndarray) -> bool:
         if zero and v != 0.0:
             return False
     return True
+
+
+@dataclass(frozen=True)
+class Me3jTuple:
+    """One pair of orbit triples of the file with all its values.
+
+    Attributes
+    ----------
+    bra, ket : tuple[int, int, int]
+        0-based orbit indices ``(a, b, c)`` with ``a >= b >= c``; the bra is lexicographically
+        not below the ket.
+    values : numpy.ndarray
+        Shape (n,), MeV, in the order of ``tuple_entries(j123, j456)``.
+    """
+
+    bra: tuple[int, int, int]
+    ket: tuple[int, int, int]
+    values: np.ndarray
+
+
+def read_values3(path: str | Path) -> np.ndarray:
+    """Read all values of a text or gzip ``me3j`` file after the one-line header.
+
+    Parameters
+    ----------
+    path : str or Path
+        The file; gzip is detected from the magic bytes. The whole file is held in memory, so this
+        is for the e3max <= 8 files (5.2e6 values at emax 8), not for the large ones.
+
+    Returns
+    -------
+    numpy.ndarray
+        Flat float64 array.
+    """
+    path = Path(path)
+    with path.open("rb") as fh:
+        magic = fh.read(2)
+    opener = _gz.open if magic == b"\x1f\x8b" else open
+    with opener(path, "rb") as fh:
+        fh.readline()
+        raw = fh.read()
+    return _fields(raw).copy().view(f"S{FIELD}").ravel().astype(np.float64)
+
+
+def iter_tuples3(
+    path: str | Path,
+    emax: int,
+    e2max: int,
+    e3max: int,
+    use_limits: tuple[int, int, int] | None = None,
+    index_range: tuple[int, int] | None = None,
+) -> Iterator[Me3jTuple]:
+    """Yield the orbit-triple pairs of a file with their values, checking the value count.
+
+    Parameters
+    ----------
+    path : str or Path
+        The file.
+    emax, e2max, e3max : int
+        Limits the file was written with (``e3max <= e2max``).
+    use_limits : tuple[int, int, int], optional
+        ``(emax, e2max, e3max)`` filter applied on the fly (inclusive), not above the file's.
+    index_range : tuple[int, int], optional
+        Half-open range of positions in the file's tuple sequence (before filtering), to split a
+        file into fixed chunks; the whole value count is still checked.
+
+    Yields
+    ------
+    Me3jTuple
+        One pair of triples. The values of a tuple are checked to be zero at the forced-zero
+        entries.
+
+    Raises
+    ------
+    ValueError
+        If the file holds a different number of values than the loop implies, or the filter
+        exceeds the file's limits.
+    RuntimeError
+        If a value at a forced-zero entry is nonzero.
+    """
+    use = (emax, e2max, e3max) if use_limits is None else use_limits
+    if use[0] > emax or use[1] > e2max or use[2] > e3max:
+        raise ValueError(f"filter {use} exceeds the file limits {(emax, e2max, e3max)}")
+    data = read_values3(path)
+    full = Layout(emax, e2max, e3max)
+    if data.size != full.total():
+        raise ValueError(f"{path}: {data.size} values, expected {full.total()} for the limits")
+    keep = keep_mask(full, *use)
+    for k, (off, cnt, bra, ket) in enumerate(kept_intervals(full, np.ones(len(keep), dtype=bool))):
+        if (index_range is not None and not index_range[0] <= k < index_range[1]) or not (
+            keep[bra] and keep[ket]
+        ):
+            continue
+        vals = data[off : off + cnt]
+        if not _forbidden_ok(full, bra, ket, vals):
+            raise RuntimeError(f"nonzero at a forced-zero entry, tuple ({bra}, {ket})")
+        yield Me3jTuple(full.triples[bra], full.triples[ket], vals)
 
 
 def filter_me3j(
@@ -216,19 +328,7 @@ def filter_me3j(
     if e2max > e2f or e3max > e3f:
         raise ValueError("requested limits exceed the file's")
     lay = Layout(emax, e2f, e3f)
-    keep = np.array(
-        [
-            all(lay.orbits[x].e <= emax for x in t)
-            and max(
-                lay.orbits[t[0]].e + lay.orbits[t[1]].e,
-                lay.orbits[t[0]].e + lay.orbits[t[2]].e,
-                lay.orbits[t[1]].e + lay.orbits[t[2]].e,
-            )
-            <= e2max
-            and sum(lay.orbits[x].e for x in t) <= e3max
-            for t in lay.triples
-        ]
-    )
+    keep = keep_mask(lay, emax, e2max, e3max)
     ivs = kept_intervals(lay, keep)
     opener = _gz.open if str(src).endswith(".gz") else open
     wopen = gzip.open if str(dst).endswith(".gz") else open

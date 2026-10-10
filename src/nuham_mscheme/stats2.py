@@ -27,7 +27,6 @@ PARTS = ("v", "tint", "v+tint")
 """Statistics tracked: the file's V, the two-body T_int alone, and their sum."""
 
 _MOFF = 40  # offset so that 2M + _MOFF indexes arrays; |2M| <= 2 * 17 for emax <= 9
-_NBIN = 2 * _MOFF + 1
 
 
 @dataclass
@@ -88,10 +87,19 @@ class BlockStats:
 
 
 class _Acc:
-    """Vectorised accumulator over (sector, 2M) bins with Neumaier-compensated 1-norm sums."""
+    """Vectorised accumulator over (sector, 2M) bins with Neumaier-compensated 1-norm sums.
 
-    def __init__(self) -> None:
-        shape = (len(SECTORS), _NBIN)
+    Parameters
+    ----------
+    n_sectors : int
+        Number of sectors (3 for two-body, 4 for three-body).
+    moff : int
+        Offset so that ``2M + moff`` indexes the bins; ``|2M| <= moff`` is required.
+    """
+
+    def __init__(self, n_sectors: int = len(SECTORS), moff: int = _MOFF) -> None:
+        self.n_sectors, self.moff, self.nbin = n_sectors, moff, 2 * moff + 1
+        shape = (n_sectors, self.nbin)
         self.struct = np.zeros(shape + (2,), dtype=np.int64)  # [..., 0] full, [..., 1] diag
         self.nnz = np.zeros(shape + (2, len(TAUS)), dtype=np.int64)
         self.lam = np.zeros(shape + (2,))
@@ -109,17 +117,17 @@ class _Acc:
         """Add |V| values ``ax`` of one block, binned by ``midx`` (2M + offset)."""
         if ax.size == 0:
             return
-        self.struct[sector, :, which] += mult * np.bincount(midx, minlength=_NBIN)
+        self.struct[sector, :, which] += mult * np.bincount(midx, minlength=self.nbin)
         # bin each |V| by how many thresholds lie below it, then cumulate: |V| > TAUS[i] <=> bin > i
         nt = len(TAUS)
         key = midx * (nt + 1) + np.searchsorted(np.asarray(TAUS), ax, side="left")
-        size = _NBIN * (nt + 1)
-        cnt = np.bincount(key, minlength=size).reshape(_NBIN, nt + 1)
-        wsum = np.bincount(key, weights=ax, minlength=size).reshape(_NBIN, nt + 1)
+        size = self.nbin * (nt + 1)
+        cnt = np.bincount(key, minlength=size).reshape(self.nbin, nt + 1)
+        wsum = np.bincount(key, weights=ax, minlength=size).reshape(self.nbin, nt + 1)
         # tail sums over bins i+1..nt
         self.nnz[sector, :, which] += mult * np.cumsum(cnt[:, :0:-1], axis=1)[:, ::-1]
         self.lam_above[sector, :, which] += mult * np.cumsum(wsum[:, :0:-1], axis=1)[:, ::-1]
-        self._kahan(sector, midx, which, mult * np.bincount(midx, weights=ax, minlength=_NBIN))
+        self._kahan(sector, midx, which, mult * np.bincount(midx, weights=ax, minlength=self.nbin))
         if which == 0:
             np.maximum.at(self.vmax[sector], midx, ax)
 
@@ -128,17 +136,17 @@ class _Acc:
         self.struct += other.struct
         self.nnz += other.nnz
         self.lam_above += other.lam_above
-        for sec in range(len(SECTORS)):
+        for sec in range(self.n_sectors):
             for which in (0, 1):
                 self._kahan(sec, None, which, other.lam[sec, :, which] + other.comp[sec, :, which])
         self.vmax = np.maximum(self.vmax, other.vmax)
 
-    def blocks(self) -> dict[tuple[str, int], BlockStats]:
+    def blocks(self, names: tuple[str, ...] = SECTORS) -> dict[tuple[str, int], BlockStats]:
         """Return the accumulated statistics as ``{(sector name, 2M): BlockStats}``."""
         out = {}
-        for sec, name in enumerate(SECTORS):
+        for sec, name in enumerate(names):
             for b in np.nonzero(self.struct[sec, :, 0])[0]:
-                out[(name, int(b) - _MOFF)] = BlockStats(
+                out[(name, int(b) - self.moff)] = BlockStats(
                     structural_full=int(self.struct[sec, b, 0]),
                     structural_diag=int(self.struct[sec, b, 1]),
                     nnz_full=[int(v) for v in self.nnz[sec, b, 0]],

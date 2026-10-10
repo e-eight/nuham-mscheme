@@ -1,6 +1,6 @@
 # Phase 0 spec: files, m-scheme convention, λ and nnz
 
-Status: **approved** (user, 2026-10-09). Phase 1 code exists and the two-body parts are verified (imsrg++ oracle, invariance tests); the three-body parts are not. Originally: nothing here was verified numerically
+Status: **approved** (user, 2026-10-09). Phase 1 code exists and the two-body parts are verified (imsrg++ oracle, invariance tests). The three-body reader and expansion kernel exist (Phase 2, steps 1–3, 2026-10-10) and pass the invariance tests below; their overall normalisation is not yet checked against an independent code (step 4). Originally: nothing here was verified numerically
 unless tagged **[V]**. Tags: **[S]** read from a source document, **[D]** derived here and not yet tested,
 **[?]** open. Sources: [nuham-jax `docs/spec-3-lab-transform-me2j.md`](https://github.com/e-eight/nuham-jax/blob/main/docs/spec-3-lab-transform-me2j.md) (me2j), [`spec-5d-lab-transform-and-me3j.md`](https://github.com/e-eight/nuham-jax/blob/main/docs/spec-5d-lab-transform-and-me3j.md)
 (me3j), [qchem-to-nuclear `CONVENTIONS.md`](https://github.com/e-eight/qchem-to-nuclear/blob/main/CONVENTIONS.md), [`checks/benstead_table2.py`](https://github.com/e-eight/qchem-to-nuclear/blob/main/checks/benstead_table2.py), and Benstead et al. 2607.21563
@@ -76,6 +76,30 @@ cannot separate the two terms in each pair. The m-scheme pn element must follow 
 The 3N file is isospin-coupled with no charge dependence at all. So the m-scheme Hamiltonian from these
 files is exactly charge-independent in the 3N part and pn-symmetric in the 2N part. **[?]** Read
 `Set_pn_TBME_from_iso` and confirm in Phase 1. This is not a bug, but any report must say it.
+
+**Three-body kernel, verified (Phase 2 steps 1–3, 2026-10-10) [V].** `mscheme3.py` implements the rule for every
+species assignment of the three slots, keeps one slot assignment per unique state p<q<r (increasing single-particle
+index between slots of the same orbit) and multiplies by the sorting sign. Tests (`tests/test_mscheme3.py`), run on
+the real LNL file (hw30to16, cut to emax 2, e2max 4, e3max 4, which contains the coinciding-orbit triples) and on
+random synthetic files:
+- Each unique triple state appears exactly once, and each matrix element is written by exactly one file tuple (or its
+  mirror).
+- The matrix is symmetric, and J₋ and T₋ commute with it: 1.2e-8 and 1.8e-8 MeV on the real file (its 8-decimal
+  rounding, values up to 0.4), 1e-9 on synthetic files. A random file does not do this for b==c triples, because
+  the file values of a physical operator are antisymmetric under the exchange of equal orbits. The synthetic
+  generator therefore projects random values onto the antisymmetric subspace.
+- Elements agree with an explicit sympy Clebsch–Gordan sum, state by state.
+- The streaming statistics equal those of the dense matrices (λ, diagonal λ, nnz, upper-triangle nnz, max, slot count
+  per sector and M₃).
+- The result does not depend on whether protons carry t_z = −½ or +½: flipping all t_z multiplies the coupled
+  isospin states by a phase that depends only on T, which bra and ket share.
+- Not tested by symmetry: the overall scale of the file values (the factor 6) and the correspondence of the file's
+  (J12, T12) coupling labels with ours, because a rescaling or a relabelling of an invariant operator is invariant
+  too. Both need the imsrg++ oracle (step 4).
+- `structural` counts the slots inside file tuples (equal parity and a common J), not every M-conserving slot.
+- Check by eye (e3max 4 and 6, hw30to16, τ = 5e-9): PPP = NNN and PPN = PNN in nnz and λ, as charge independence
+  demands. At e3max 6: 2.73e7 structural upper-triangle slots, 2.717e7 nonzero, λ_ut 1.41e5 MeV, max |W| 0.457 MeV,
+  97 s on one core.
 
 Conservation (all exact, used as slot-count filters and as tests): total M (pair M₂, triple M₃), total T_z,
 parity.
@@ -176,7 +200,7 @@ package versions. Results keyed by (body rank, sector, M block).
 
 1. Is the tables' λ column the full sum or the upper-triangle sum (§5)? Decided by computation in Phase 1.
 2. Does `Set_pn_TBME_from_iso` match the pn rule of §3? Read it, then test against imsrg++ `GetMschemeMatrixElement_2b`.
-3. Coinciding-orbit 3N triples and the factor 6: not isolated numerically (spec-5d open question 1). Phase 2.
+3. Coinciding-orbit 3N triples and the factor 6: the coinciding-orbit rule passes the J₋/T₋ and antisymmetry tests (§3); the factor 6 is still not isolated numerically (spec-5d open question 1). Needs the imsrg++ 3b oracle (Phase 2, step 4).
 4. ~~One-body operator~~ Decided: T_int (§4.2). Still open: A and ħω as run inputs, and whether to report the T_int two-body part inside or beside the V part.
 5. Which hbar-omega and file Benstead used is unknown (qchem-to-nuclear assumes 16 MeV). Not needed for the code.
 6. Output layout for nuclear-rank-representation (§6).
