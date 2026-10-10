@@ -114,6 +114,36 @@ tables cannot be reproduced from the LNL file by a cut or a convention. The thre
 three-body operator (force, regulator, basis conversion) and which sparsification gave Tables IX–XII, and why PPN and
 PNN differ.
 
+## Speed after batching the kernel
+
+The first kernel built one small block per (assignment pair, M₃), about 100 elements each, so the time was Python
+overhead (5.3 µs per slot). `tuple_tensor` (`mscheme3.py`) expands a file tuple into one padded tensor over (pair, M₃,
+row, column) with batched matrix products, and `stats3.py` bins the magnitudes of a tuple with one pass. The old
+`triple_blocks` stays as the reference. Checks: the tensor equals the old blocks element by element (max difference
+2.8e-17, same set of blocks, signs included; `test_batched_tensor_equals_the_block_kernel`); the statistics still
+equal the dense matrices; and the full e3max 8 sweep of the hw30to16 file reproduces the manifest above: identical
+structural counts and identical nonzero counts at every τ > 0 in all 80 blocks, 1-norms to 2.4e-15 relative, max to
+3e-17. The counts at τ = 0 differ by 18 in total (roundoff noise, which is why τ = 5e-9 is the robust threshold).
+
+| | Before | After |
+|---|---|---|
+| e3max 6, one core | 93 s | 4.4 s |
+| e3max 8, one core | about 1900 s (estimated) | 91 s (0.17 µs per slot) |
+| e3max 8, 16 threads | 176 s | 20 s |
+
+The 16 threads are 8 physical cores and give 4.7 times one core, limited by memory bandwidth, not by BLAS threads.
+`tests/test_run3.py` dropped from 160 s to 15 s.
+
+Rough exact cost with the new speed (slot counts extrapolated, the per-slot cost may grow with j by a factor of 2 to
+3, and the larger files need a chunked streaming reader first):
+
+| e3max | Slots | One core | This machine (4.7×) |
+|---|---|---|---|
+| 10 | about 6e9 | 17 min | 4 min |
+| 12 | about 4.5e10 | 2 h | 25 min |
+| 14 | about 2e11 | 9 h | 2 h |
+| 16 | about 7e11 | 33 h | 7 h |
+
 ## Open
 
 - e3max above 8 (Phase 3, the sampler) and the output shape for nuclear-rank-representation, both not decided.

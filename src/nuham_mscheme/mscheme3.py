@@ -74,12 +74,30 @@ class TripleBasis:
         self.nsp = int(self.off[-1])
         self.max_m2 = 3 * max(o.j2 for o in orbits)
         self._cache: dict[tuple[tuple[int, int, int], int], SlotStates] = {}
+        self._rows: dict[tuple[int, int, int], TripleRows] = {}
 
     def decode(self, g: int) -> tuple[int, int, int]:
         """Return ``(species, orbit index, 2m)`` of a global single-particle index."""
         species, rest = divmod(g, self.nsp)
         orbit = int(np.searchsorted(self.off, rest, side="right")) - 1
         return species, orbit, 2 * (rest - int(self.off[orbit])) - self.orbits[orbit].j2
+
+    def triple_rows(self, triple: tuple[int, int, int]) -> "TripleRows":
+        """Return the M-grouped, padded layout of ``triple`` (cached)."""
+        if triple not in self._rows:
+            m2 = self.slot_states(triple, 0).m2
+            m_max = sum(self.orbits[i].j2 for i in triple)
+            slot = (m2 + m_max) // 2
+            order = np.argsort(slot, kind="stable")
+            counts = np.bincount(slot, minlength=m_max + 1)
+            pos = np.arange(len(m2)) - (np.cumsum(counts) - counts)[slot[order]]
+            rows = np.full((m_max + 1, int(counts.max())), -1, dtype=np.int64)
+            rows[slot[order], pos] = order
+            ok = np.stack(
+                [np.append(self.slot_states(triple, a).ok, False)[rows] for a in range(N_ASSIGN)]
+            )
+            self._rows[triple] = TripleRows(m_max, rows, ok)
+        return self._rows[triple]
 
     def slot_states(self, triple: tuple[int, int, int], assign: int) -> SlotStates:
         """Return the product states of ``triple`` (``a >= b >= c``) with species ``assign``."""
@@ -104,6 +122,27 @@ class TripleBasis:
                 g=np.sort(np.stack(g, axis=-1), axis=-1),
             )
         return self._cache[key]
+
+
+@dataclass(frozen=True)
+class TripleRows:
+    """The product states of an orbit triple grouped by total M, padded to a rectangle.
+
+    Attributes
+    ----------
+    m_max : int
+        Largest 2M of the triple, ``j_a + j_b + j_c`` (doubled j values); the 2M of row ``s`` is
+        ``2 s - m_max``.
+    rows : numpy.ndarray
+        Shape (m_max + 1, width): flat product indices of each M, -1 where padded.
+    ok : numpy.ndarray
+        Shape (8, m_max + 1, width), bool: the slot is the canonical assignment of a unique state,
+        for each species assignment; False on padding.
+    """
+
+    m_max: int
+    rows: np.ndarray
+    ok: np.ndarray
 
 
 @dataclass(frozen=True)
@@ -265,3 +304,111 @@ def triple_blocks(basis: TripleBasis, tup: Me3jTuple) -> Iterator[TripleBlock]:
                     bra_sign=rb.sign[rows],
                     ket_sign=rk.sign[cols],
                 )
+
+
+def _pairs() -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Return the species-assignment pairs with equal total t_z: (bra, ket, sector) arrays."""
+    _, tz2 = _isospin()
+    b, k = np.nonzero(tz2[:, None] == tz2[None, :])
+    sector = np.array([bin(a).count("1") for a in b])
+    return b, k, sector
+
+
+@cache
+def _spatial_pad(
+    j123: tuple[int, int, int], j12s: tuple[int, ...], js: tuple[int, ...]
+) -> np.ndarray:
+    """Return ``_spatial`` as (n_J, n_product + 1, n_j12), with a zero row appended for padding."""
+    sp = _spatial(j123, j12s, js)
+    flat = sp.reshape(-1, len(j12s), len(js)).transpose(2, 0, 1)
+    out = np.concatenate([flat, np.zeros((len(js), 1, len(j12s)))], axis=1)
+    out.setflags(write=False)
+    return out
+
+
+@dataclass(frozen=True)
+class TupleTensor:
+    """All blocks of one file tuple as one padded tensor.
+
+    Attributes
+    ----------
+    x : numpy.ndarray
+        Shape (n_pair, n_M, width_bra, width_ket): the elements for every species-assignment pair
+        and every M common to bra and ket. Entries on padding or non-canonical slots are not
+        meaningful; use ``valid``.
+    ok_bra, ok_ket : numpy.ndarray
+        Shape (n_pair, n_M, width), bool: the row / column is a unique state.
+    m2 : numpy.ndarray
+        Twice M of each of the n_M groups.
+    pair_bra, pair_ket, pair_sector : numpy.ndarray
+        Species assignments and sector (number of neutrons) of each pair.
+    rows_bra, rows_ket : numpy.ndarray
+        Shape (n_M, width): flat product index of each row / column, -1 on padding.
+    """
+
+    x: np.ndarray
+    ok_bra: np.ndarray
+    ok_ket: np.ndarray
+    m2: np.ndarray
+    pair_bra: np.ndarray
+    pair_ket: np.ndarray
+    pair_sector: np.ndarray
+    rows_bra: np.ndarray
+    rows_ket: np.ndarray
+
+    @property
+    def valid(self) -> np.ndarray:
+        """Boolean mask of the meaningful elements, shape of ``x``."""
+        return self.ok_bra[:, :, :, None] & self.ok_ket[:, :, None, :]
+
+
+def tuple_tensor(basis: TripleBasis, tup: Me3jTuple, signed: bool = False) -> TupleTensor:
+    """Expand one file tuple into a padded tensor over (pair, M, row, column).
+
+    Same arithmetic as ``triple_blocks`` with the Python loops over assignment pairs and M
+    replaced by batched matrix products, so numpy is called once per tuple instead of once per
+    block.
+
+    Parameters
+    ----------
+    basis : TripleBasis
+        Single-particle ordering.
+    tup : Me3jTuple
+        The pair of orbit triples with its values.
+    signed : bool
+        If True multiply by the sorting signs (the elements equal those of ``triple_blocks``); the
+        statistics need only magnitudes and leave this off.
+    """
+    orbs = basis.orbits
+    j123 = (orbs[tup.bra[0]].j2, orbs[tup.bra[1]].j2, orbs[tup.bra[2]].j2)
+    j456 = (orbs[tup.ket[0]].j2, orbs[tup.ket[1]].j2, orbs[tup.ket[2]].j2)
+    j12s, j45s, js, index = _slots(j123, j456)
+    if len(index) != len(tup.values):
+        raise ValueError(
+            f"tuple {tup.bra}, {tup.ket}: {len(tup.values)} values, {len(index)} slots"
+        )
+    vt = np.zeros((len(j12s), 2, len(j45s), 2, len(js), 2))
+    vt[tuple(index.T)] = tup.values
+    pb, pk, psec = _pairs()
+    iso, _ = _isospin()
+    u = np.einsum("pxT,pyT,ixkyJT->pJik", iso[pb], iso[pk], vt)  # (pair, J, j12, j45)
+    rb, rk = basis.triple_rows(tup.bra), basis.triple_rows(tup.ket)
+    m_c = min(rb.m_max, rk.m_max)
+    ob, ok_ = (rb.m_max - m_c) // 2, (rk.m_max - m_c) // 2
+    n_m = m_c + 1
+    rows_b = rb.rows[ob : ob + n_m]
+    rows_k = rk.rows[ok_ : ok_ + n_m]
+    a = _spatial_pad(j123, j12s, js)[:, rows_b]  # (J, M, rows, j12)
+    bt = _spatial_pad(j456, j45s, js)[:, rows_k].transpose(0, 1, 3, 2)  # (J, M, j45, cols)
+    x = np.zeros((len(pb), n_m, rows_b.shape[1], rows_k.shape[1]))
+    for y in range(len(js)):
+        x += (a[y][None] @ u[:, y, None]) @ bt[y][None]
+    ok_b = rb.ok[:, ob : ob + n_m][pb]
+    ok_k = rk.ok[:, ok_ : ok_ + n_m][pk]
+    if signed:
+        sb = np.stack([basis.slot_states(tup.bra, q).sign for q in range(N_ASSIGN)])
+        sk = np.stack([basis.slot_states(tup.ket, q).sign for q in range(N_ASSIGN)])
+        sgn_b = np.where(rows_b[None] >= 0, sb[:, rows_b], 0)[pb]
+        sgn_k = np.where(rows_k[None] >= 0, sk[:, rows_k], 0)[pk]
+        x *= sgn_b[:, :, :, None] * sgn_k[:, :, None, :]
+    return TupleTensor(x, ok_b, ok_k, 2 * np.arange(n_m) - m_c, pb, pk, psec, rows_b, rows_k)

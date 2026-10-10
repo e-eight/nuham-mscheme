@@ -62,7 +62,7 @@ science repos as spot checks).
 | 2 | 3N exact sweep, emax 8, e3max 8; sector and pair-M splits | imsrg++ getter; structural bounds; Benstead's 2.73e5 as target |
 | 3 | 3N stratified sampler, e3max 10–16 | exact sweep reproduced at e3max 8 within the sampler's error bar |
 
-Compute: Phase 2 measured on 16 workers (hw30to16 file, structural upper-triangle slots): e3max 5: 4.9e6 slots, 7 s; 6: 2.7e7, 17 s; 7: 1.3e8, 57 s; 8: 5.3e8, 176 s; 0.3 GB per process. Time Phase 1 at emax 4–6 and Phase 2 at e3max 4–6 first, and give an estimate
+Compute: Phase 2 measured on 16 workers (hw30to16 file, structural upper-triangle slots): e3max 5: 4.9e6 slots, 7 s; 6: 2.7e7, 17 s; 7: 1.3e8, 57 s; 8: 5.3e8, 176 s; 0.3 GB per process. After batching the kernel (`tuple_tensor`, 2026-10-10): e3max 8 takes 91 s on one core (0.17 µs per slot, 31 times faster) and 20 s on 16 threads (8 physical cores). Time Phase 1 at emax 4–6 and Phase 2 at e3max 4–6 first, and give an estimate
 before any run at production size. Inputs at production size live on DeltaAI (for example the LNL
 emax 8, e3max 16 file of job 3330462, 16.9 GB); local machine has 16 cores and 19 GB.
 

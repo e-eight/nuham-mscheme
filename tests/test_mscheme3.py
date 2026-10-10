@@ -18,7 +18,15 @@ from nuham_mscheme.me3j import (
     kept_intervals,
     tuple_entries,
 )
-from nuham_mscheme.mscheme3 import SECTORS3, TripleBasis, _isospin, _slots, _spatial
+from nuham_mscheme.mscheme3 import (
+    SECTORS3,
+    TripleBasis,
+    _isospin,
+    _slots,
+    _spatial,
+    triple_blocks,
+    tuple_tensor,
+)
 from nuham_mscheme.stats3 import ThreeBodyStats
 
 REAL = (
@@ -310,3 +318,25 @@ def test_matches_explicit_sympy_sum(space):
         if done > 60:
             break
     assert done > 20
+
+
+def test_batched_tensor_equals_the_block_kernel(space):
+    """The padded tensor holds exactly the blocks of ``triple_blocks``, signs included."""
+    basis, tuples, *_ = space
+    nblocks = 0
+    for tup in tuples:
+        tt = tuple_tensor(basis, tup, signed=True)
+        old = {(b.assign_bra, b.assign_ket, b.m2): b.x for b in triple_blocks(basis, tup)}
+        new = set()
+        for p in range(len(tt.pair_bra)):
+            for m, m2 in enumerate(tt.m2):
+                rows = np.flatnonzero(tt.ok_bra[p, m])
+                cols = np.flatnonzero(tt.ok_ket[p, m])
+                if len(rows) == 0 or len(cols) == 0:
+                    continue
+                key = (int(tt.pair_bra[p]), int(tt.pair_ket[p]), int(m2))
+                new.add(key)
+                assert np.allclose(tt.x[p, m][np.ix_(rows, cols)], old[key], atol=1e-13, rtol=0)
+                nblocks += 1
+        assert new == set(old)
+    assert nblocks > 1000
