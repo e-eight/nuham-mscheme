@@ -4,7 +4,8 @@ Turns J-coupled nuclear matrix-element files (`me2j`, `me3j`) into the m-scheme 
 fault-tolerant cost models need: 1-norms (λ), nonzero counts, and maximum magnitudes.
 
 Started 2026-10-09 as a spin-off of [qchem-to-nuclear](https://github.com/e-eight/qchem-to-nuclear) (Batch 2). Status: Phase 0 spec approved
-(`docs/spec.md`, 2026-10-09), no code.
+(`docs/spec.md`, 2026-10-09); Phase 1 (two-body) done, see `docs/benstead-comparison.md` for the open
+comparison with Benstead's tables; Phase 2 not started.
 
 ## Why a separate package
 

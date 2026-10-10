@@ -1,6 +1,6 @@
 # Phase 0 spec: files, m-scheme convention, λ and nnz
 
-Status: **approved** (user, 2026-10-09). No code exists. Nothing here is verified numerically
+Status: **approved** (user, 2026-10-09). Phase 1 code exists and the two-body parts are verified (imsrg++ oracle, invariance tests); the three-body parts are not. Originally: nothing here was verified numerically
 unless tagged **[V]**. Tags: **[S]** read from a source document, **[D]** derived here and not yet tested,
 **[?]** open. Sources: [nuham-jax `docs/spec-3-lab-transform-me2j.md`](https://github.com/e-eight/nuham-jax/blob/main/docs/spec-3-lab-transform-me2j.md) (me2j), [`spec-5d-lab-transform-and-me3j.md`](https://github.com/e-eight/nuham-jax/blob/main/docs/spec-5d-lab-transform-and-me3j.md)
 (me3j), [qchem-to-nuclear `CONVENTIONS.md`](https://github.com/e-eight/qchem-to-nuclear/blob/main/CONVENTIONS.md), [`checks/benstead_table2.py`](https://github.com/e-eight/qchem-to-nuclear/blob/main/checks/benstead_table2.py), and Benstead et al. 2607.21563
