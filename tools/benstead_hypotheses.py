@@ -17,6 +17,7 @@ fits if both ratios are about 1 in every block.
 
 import json
 import sys
+from collections.abc import Callable
 from multiprocessing import Pool
 from pathlib import Path
 
@@ -87,7 +88,9 @@ def main(path: str, workers: int = 8) -> None:
     n = tuple_count(EMAX, E2MAX)
     edges = np.linspace(0, n, 4 * workers + 1).astype(int)
     with Pool(workers) as pool:
-        parts = pool.map(_job, [(path, int(a), int(b)) for a, b in zip(edges[:-1], edges[1:])])
+        parts = pool.map(
+            _job, [(path, int(a), int(b)) for a, b in zip(edges[:-1], edges[1:], strict=True)]
+        )
     coup = {k: sum(p[0][k] for p in parts) for k in parts[0][0]}
     st_a, st_b = parts[0][1]
     for _, (a, b) in parts[1:]:
@@ -96,7 +99,7 @@ def main(path: str, workers: int = 8) -> None:
     bl_a, bl_b = st_a.blocks(), st_b.blocks()
     bench = json.loads(DATA.read_text())
 
-    def show(title: str, sector: str, get) -> None:
+    def show(title: str, sector: str, get: Callable[[int], tuple[float, float]]) -> None:
         print(f"\n{title}\n  M  nnz(B)  nnz(test)  ratio |  lam(B)  lam(test)  ratio")
         for m, (lam_b, nnz_b) in sorted(bench[sector].items(), key=lambda kv: int(kv[0])):
             nn, lam = get(int(m))
