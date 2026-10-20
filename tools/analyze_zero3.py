@@ -16,6 +16,7 @@ import time
 from collections.abc import Sequence
 from pathlib import Path
 from types import ModuleType
+from typing import Any
 
 import numpy as np
 from sympy import Expr, Rational, S, simplify
@@ -179,6 +180,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", type=Path)
     ap.add_argument("--out", type=Path)
+    ap.add_argument("--local-run", type=Path, help="local native + imported ARM fixture replay")
     ap.add_argument("--entry-fixture", type=Path)
     ap.add_argument("--bra")
     ap.add_argument("--ket")
@@ -193,7 +195,7 @@ def main() -> None:
             json.dumps(
                 dict(
                     expression=str(x),
-                    zero=bool(x == 0),
+                    zero=x.is_zero,  # None stays unresolved; structural inequality is not proof.
                     decimal80=str(x.evalf(80)),
                     decimal160=str(x.evalf(160)),
                 )
@@ -211,7 +213,7 @@ def main() -> None:
         diagnostic.require(
             diagnostic.sha(args.run / f["path"]) == f["sha256"], "parent artifact hash"
         )
-    manifest = dict(
+    manifest: dict[str, Any] = dict(
         status="running",
         started_utc=time.strftime("%FT%TZ", time.gmtime()),
         git_commit=diagnostic.git("rev-parse", "HEAD"),
@@ -238,6 +240,51 @@ def main() -> None:
     diagnostic.dump(args.out / "manifest.json", manifest)
     try:
         diagnostic.require(not manifest["git_status"], "analysis requires clean checkout")
+        if args.local_run:
+            local_manifest = json.loads((args.local_run / "manifest.json").read_text())
+            diagnostic.require(
+                local_manifest["status"] == "diagnostic_complete", "local incomplete"
+            )
+            for f in local_manifest["outputs"]:
+                diagnostic.require(
+                    diagnostic.sha(args.local_run / f["path"]) == f["sha256"], "local artifact hash"
+                )
+            manifest["inputs"].append(
+                dict(
+                    path=str(args.local_run / "manifest.json"),
+                    sha256=diagnostic.sha(args.local_run / "manifest.json"),
+                )
+            )
+            diagnostic.require(
+                parent["native_fingerprints"] == local_manifest["frozen_fingerprints"],
+                "ARM fixture identity",
+            )
+            diagnostic.require(
+                parent["frozen_fingerprints"] == local_manifest["native_fingerprints"],
+                "laptop fixture identity",
+            )
+            diagnostic.dump(args.out / "manifest.json", manifest)
+            comparisons = {}
+            for origin, arm, local in (
+                ("laptop", args.run / "frozen", args.local_run / "native"),
+                ("ARM", args.run / "native", args.local_run / "frozen"),
+            ):
+                for path in ("dense", "batched"):
+                    with np.load(arm / (path + ".npz")) as a, np.load(local / (path + ".npz")) as b:
+                        diagnostic.require(a.files == b.files, "block coverage differs")
+                        keys = [k for k in a.files if not k.endswith("_states")]
+                        for k in a.files:
+                            if k.endswith("_states"):
+                                diagnostic.require(np.array_equal(a[k], b[k]), "state ordering")
+                        comparisons[origin + "/" + path] = dict(
+                            zero_mask_differences=sum(
+                                int(np.count_nonzero((a[k] == 0) != (b[k] == 0))) for k in keys
+                            ),
+                            different_values=sum(int(np.count_nonzero(a[k] != b[k])) for k in keys),
+                            max_abs_difference=max(float(np.abs(a[k] - b[k]).max()) for k in keys),
+                            bitwise_equal=all(a[k].tobytes() == b[k].tobytes() for k in keys),
+                        )
+            diagnostic.dump(args.out / "cross-platform.json", comparisons)
         entries = json.loads((args.run / "native/mismatches.json").read_text())
         data = diagnostic.load(fixture)
         tuples = diagnostic.unpack(data)
