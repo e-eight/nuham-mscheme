@@ -72,3 +72,27 @@ Check scheduler exit/state, manifest status, hashes, all mismatch reports and
 trace-selection limits. A mismatch is expected diagnostic evidence. P6 and W8
 compatibility remain outside this job. If additional cluster work is needed,
 report the evidence and obtain authorization rather than resubmitting.
+
+## Local exact-entry follow-up
+
+`tools/analyze_zero3.py` operates on a retrieved run, not on DeltaAI. It verifies
+the parent artifacts, then evaluates each suspect entry in a separate process
+with a 30-second bound. Stored floats are converted using their exact integer
+ratios; Clebsch-Gordan factors and channel summation remain exact until the final
+expression is evaluated for display. Channel enumeration is independent of
+the producer. Assumptions, signs and MeV units are those of spec section 3.
+It also contracts the exported float64 helper arrays as exact rationals to
+separate helper approximation from floating summation. Stable decimal output
+alone is never labeled an exact zero.
+
+Tests cover a known catastrophic-cancellation sum, agreement with the previous
+independent explicit reference, Hermitian exchange, a forbidden different-M
+element, the spin-singlet CG sign and a nonzero negative matrix-element control.
+Run from this checkout with its `src` on PYTHONPATH and the same thread settings:
+
+```bash
+PYTHONPATH=src python tools/analyze_zero3.py --run RETRIEVED_RUN --out runs/exact-analysis
+```
+
+This follow-up does not alter or redeploy the submitted e5ccd91 revision and
+does not authorize an additional cluster job.
