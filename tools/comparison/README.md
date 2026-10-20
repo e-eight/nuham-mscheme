@@ -50,3 +50,37 @@ recorded hash and both empty difference reports. A running manifest after
 scheduler termination is incomplete. There are no checkpoints: any approved
 retry uses a fresh output directory, never overwrites evidence. Do not run
 numerical checks on a login node; monitor scheduler status sparingly.
+
+
+## P6 pilot after compatibility job 3422230
+
+`p6_pilot.py` and `p6_pilot.sbatch` run the one missing point with explicit
+use limits (7,8,8) and source layout (8,16,8), three workers, 256 fixed chunks.
+Pass the full deployed commit to sbatch. The wrapper authenticates the previous
+remote gate manifest and outputs, enforces unchanged numerical src/validated
+tests/checker, records actual environment, and repeats the short real-source
+one/three-worker smoke before the pilot. Its --smoke-only mode is for local
+orchestration validation; it does not compute P6 or accept a pilot result.
+
+The extra discarded-support calculation independently enumerates all one-,
+two-, three-slot energy bounds and excludes a tuple when either endpoint fails.
+Kept plus removed must reconstruct every W8 count exactly, additive norms to
+rtol=atol=1e-12 MeV, and maxima by maximum. The small test covers full retention,
+partial retention and the minimal space, plus count corruption and incorrect
+endpoint logic. Use a physical Hermitian synthetic fixture: the reader's
+pseudo-data do not support additive upper counts derived by halving full/diag.
+The initial test caught that fixture mismatch; no tolerance was loosened.
+
+Resources: bhhk-dtai-gh, ghx4/projects, 3 CPUs, 1536 MiB, 1 minute and one
+site-required GPU reservation. W8 at this worker count took 19.91 s, and the
+whole earlier job peaked at 1105600 KiB. This subset plus the small complement,
+smoke and provenance is budgeted at roughly 30 s. Record actual pilot usage.
+There is no checkpoint or automatic resubmission. Pin and deploy through Git,
+write logs under ignored runs/, and guard the submission receipt against reuse.
+
+Review: no numerical producer/test changes. Source/use limits and tau=0 are
+explicit; the complement has disjoint coefficient support and is a bookkeeping
+check, not a second coupling oracle. All four species and both triangles are
+retained. Exact integers remain exact; float tolerances are unchanged. Previous
+physical/source precision caveats continue to apply. Result acceptance requires
+scheduler success, passed outer manifest, output hashes and local revalidation.
