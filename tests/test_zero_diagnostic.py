@@ -69,22 +69,30 @@ def test_accumulator_corruption_is_detected(fixture, tmp_path, monkeypatch):
 def test_zero_mismatch_capture(fixture, tmp_path, monkeypatch):
     """An injected symmetric zero must produce two indexed entries and a trace."""
     original = d.dense_blocks
+    injected = set()
 
     def corrupted(*args):
         blocks = original(*args)
-        for matrix, _ in blocks.values():
+        for (sector, m2), (matrix, _) in blocks.items():
             candidates = np.argwhere(np.triu(np.abs(matrix), 1) > 0.1)
             if len(candidates):
                 r, c = candidates[0]
                 matrix[r, c] = matrix[c, r] = 0.0
+                name = f"{d.kernel.SECTORS3[sector]}:{m2}"
+                injected.update(((name, int(r), int(c)), (name, int(c), int(r))))
                 break
         return blocks
 
     monkeypatch.setattr(d, "dense_blocks", corrupted)
     out = tmp_path / "zero-mutation"
     result = d.evaluate(fixture, out)
-    assert result["zero_disagreements"] == 2
     entries = json.loads((out / "mismatches.json").read_text())
-    assert all(e["dense"] == 0 and abs(e["batched"]) > 0.1 for e in entries)
-    assert all(e["mirror_disagrees"] for e in entries)
-    assert list(out.glob("trace-*.npz"))
+    assert result["zero_disagreements"] == len(entries)
+    # ARM may already have tiny scalar/batched mismatches. Check the injected
+    # positions independently, without asserting an environment-specific total.
+    found = [e for e in entries if (e["block"], e["row"], e["col"]) in injected]
+    assert len(injected) == len(found) == 2
+    assert {(e["block"], e["row"], e["col"]) for e in found} == injected
+    assert all(e["dense"] == 0 and abs(e["batched"]) > 0.1 for e in found)
+    assert all(e["mirror_disagrees"] for e in found)
+    assert all((out / f"trace-{e['tuple_id']}.npz").exists() for e in found)
