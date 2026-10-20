@@ -8,3 +8,6 @@ Spun off from [qchem-to-nuclear](https://github.com/e-eight/qchem-to-nuclear) on
 - Conventions as in [nuham-jax `CLAUDE.md`](https://github.com/e-eight/nuham-jax/blob/main/CLAUDE.md): `uv`, `ruff`, `ty`, `pytest`, docstrings and type
   annotations, NuHamil's constants.
 - Give a measured compute estimate before any run beyond a small test case.
+
+Read `CONVENTIONS.md` before numerical changes. Diagnostic tooling must preserve
+the failing tests and producer arithmetic until a cause has been established.

@@ -1,0 +1,50 @@
+{
+  "started_utc": "2026-10-20T05:46:44Z",
+  "host": "darjeeling",
+  "architecture": "x86_64",
+  "python": "3.13.2 (main, Feb  5 2025, 19:11:32) [Clang 19.1.6 ]",
+  "seeds": {
+    "synthetic": 20261010
+  },
+  "limits": [
+    2,
+    4,
+    4
+  ],
+  "native_fingerprints": {
+    "limits": "04517d47cebfb7273d6dcd2b622bc22d4e684ad650e358211a32d48faaa6b68c",
+    "keys": "8acacce9b582e80113f562883f0a536ee1d7eee39072057437c0aac370b4243d",
+    "offsets": "9c8cd83682b773eacfad2e3dfe2c0c4b2c5a4f2d18a49c00828a4d0a2dacc2d6",
+    "values": "77eb8f8dcae2af43f5c8aa39bd0b44a1258519217514b119c12be45b074fff0b",
+    "before_cleanup": "1ab64b45cf71488071a5344f61228ca78614aedc2077e93d1931923f08cd96d9"
+  },
+  "producer_hashes": {
+    "src/nuham_mscheme/__init__.py": "69680f602518634848d2ed9e6f558d1f3cd902475ef199cdd74e69592f6f3672",
+    "src/nuham_mscheme/cg.py": "b696a518c23e9554a3b8e43c75cabe2a90e13f64bd53faddc66796ff0d5eb2a5",
+    "src/nuham_mscheme/dense2.py": "d8e1589b82d9c928a3004da37edd2487f83d84c4f7b44be34752669a06cc6dfb",
+    "src/nuham_mscheme/dense3.py": "68707305ef6f13dc3e12a7ffc07363c9d90472c2e15c4dcbc9e371faa0cb086a",
+    "src/nuham_mscheme/filters.py": "55412e58af53cec0536788380acb826aa82c82347c9609b5228478335f2c35f0",
+    "src/nuham_mscheme/ho1b.py": "5dfb7fa7bca287a417dc423e7d15aae2d2f4678278de1c7eb8097b85a13ad5cf",
+    "src/nuham_mscheme/me2j.py": "175804f6099356ded2aa88f3f01697f52c94772529f9069cb6d0acb433885dea",
+    "src/nuham_mscheme/me3j.py": "1b0d6f392e1d054c721c49d4f8b0ce3d755df88fc851f8e13822ff0402d2a238",
+    "src/nuham_mscheme/mscheme2.py": "015bbbc193c5aa4a54aa48653d5d3c81cd2e355d21c6a739399b5b384fb3904f",
+    "src/nuham_mscheme/mscheme3.py": "deaa00e0fcce3079497ebf0eff60047294fcc78cc77e4003e436cd22ed540ad4",
+    "src/nuham_mscheme/onebody.py": "09e0a20bc60beda9dfc85b73b0c987075dc687a560ed38d79cec01ebf1e06982",
+    "src/nuham_mscheme/orbits.py": "bc3f6d2383346f2b7f09aa07408ce42fc907aed261ad0b054e218a5bc0870fca",
+    "src/nuham_mscheme/py.typed": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "src/nuham_mscheme/run2.py": "dbdce39ec6ce00d858da5cd9a75b394c93c4cc8feb6460e83047646b24e68e07",
+    "src/nuham_mscheme/run3.py": "df238b0dcd34f0c0d9cd6697019577be8e895a86f14403ec9a1672fb2b4ed52e",
+    "src/nuham_mscheme/stats2.py": "92a0b32f9a1cf40b2a9b50bce3a89266835edbd2f62034feb2594f1a8c55afef",
+    "src/nuham_mscheme/stats3.py": "ae093b3bcebfda857b673a6a74c618e4fcfc5df0009e86c89ee998ce4944eae3",
+    "tests/conftest.py": "b2a11e4536b49bba90f8e16d779b58ee7b3a4d0bbbabb821dde5da12317a696a",
+    "tests/test_cg.py": "bfd61e9525a499e9e8dd9fcba2609820b3bf739a05227972d8475b07b3fcf357",
+    "tests/test_ho1b.py": "611d209fa8c3bdea43e5d60148b14b24641aaad76ab32ed543d460f9001a78b5",
+    "tests/test_imsrg_oracle.py": "c27887a71722159a2c768b058350b96057f0b6f0becf6039432912b6517f1470",
+    "tests/test_imsrg_oracle3.py": "6b0c2ebf1c689bafd4982fb881c476bf12032fdb705960420a6a2c164648579a",
+    "tests/test_me3j.py": "5acd22da6e9981dd33a247eedc06799c68109cc82490c76930f92e51b5ba5054",
+    "tests/test_mscheme2.py": "4b28ad97c118c59534f341452e34005d8dc4c4f474d64f506982e4d1c8823ce8",
+    "tests/test_mscheme3.py": "6eb5c1a68bd190af0c989e893722bc95fe34010a8b5b0839bfce8db9bf0deec9",
+    "tests/test_run2.py": "fd31b22d6dd4ad81140bc94344eec76d5871ef7713ced07282491c1db997b5a0",
+    "tests/test_run3.py": "9a0634ce003d9b8587bb18868c71fcf081ed8664012d19418cb0517ca23b56a4"
+  }
+}
