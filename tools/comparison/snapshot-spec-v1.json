@@ -1,0 +1,506 @@
+{
+  "schema": "comparison-inputs-v1",
+  "units": "MeV",
+  "threshold": 0.0,
+  "loading_policy": "ADR0008-support-filtered-computed-nonzeros",
+  "common": {
+    "A": 16,
+    "Z": 8,
+    "N": 8,
+    "M": 0,
+    "parity": 1,
+    "hw_MeV": 16.0,
+    "algorithmic_precision_MeV": 0.01,
+    "precision_source": "Benstead; ADR0007",
+    "interaction": "EM500 N3LO NN + N3LOEMlnl 3N; SRG 2 fm^-1; primary 3N hw30to16",
+    "scope": "represented numerical operator; no physical convergence or cost claim"
+  },
+  "manifests": {
+    "NN_F8": {
+      "root": "inputs",
+      "path": "runs/out/emax8_hw16.json",
+      "sha256": "26586f6c86bbdc27541e667328ba291067f0559126c8af2d94d3e984bf86ca9f",
+      "metadata": {
+        "git_commit": "1acd02c2974601a0dd27340792a5c41feae45a5a",
+        "git_dirty": false,
+        "file_limits": {
+          "emax": 8,
+          "e2max": 16,
+          "lmax": 8
+        },
+        "filters": {
+          "emax": 8,
+          "e2max": 16
+        },
+        "taus": [
+          0.0,
+          5e-09,
+          1e-06,
+          2e-06,
+          4.9999999999999996e-06,
+          1e-05,
+          2e-05,
+          5e-05,
+          0.0001,
+          0.0002,
+          0.0005,
+          0.001,
+          0.002,
+          0.005,
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "convention": "B (docs/spec.md 4.2): unique pair states, lambda over both triangles",
+        "input_sha256": "f7ce10a7cdcd5760926fd5cfe25f0e69576fd0eb9930d124ec569fd2edc659e5",
+        "tint": {
+          "hw": 16.0,
+          "A": 16
+        }
+      }
+    },
+    "NN_P6": {
+      "root": "inputs",
+      "path": "runs/out/emax8_hw16_nmax6_O16_tint.json",
+      "sha256": "2ca54cf35718ea61c41e370c5a872887549f4060dac1914ead842d4a35aa5d8b",
+      "metadata": {
+        "git_commit": "6cf23b010e2f6a1db578615b1bac10a7b6157764",
+        "git_dirty": false,
+        "file_limits": {
+          "emax": 8,
+          "e2max": 16,
+          "lmax": 8
+        },
+        "filters": {
+          "emax": 7,
+          "e2max": 8
+        },
+        "taus": [
+          0.0,
+          5e-09,
+          1e-06,
+          2e-06,
+          4.9999999999999996e-06,
+          1e-05,
+          2e-05,
+          5e-05,
+          0.0001,
+          0.0002,
+          0.0005,
+          0.001,
+          0.002,
+          0.005,
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "convention": "B (docs/spec.md 4.2): unique pair states, lambda over both triangles",
+        "input_sha256": "f7ce10a7cdcd5760926fd5cfe25f0e69576fd0eb9930d124ec569fd2edc659e5",
+        "tint": {
+          "hw": 16.0,
+          "A": 16
+        }
+      }
+    },
+    "NN_P8": {
+      "root": "inputs",
+      "path": "runs/out/emax9_hw16_nmax8_O16_tint.json",
+      "sha256": "2abc50588cb0d53563289aa94c3635aef56163ed33e03143ec7808077bdffd20",
+      "metadata": {
+        "git_commit": "6cf23b010e2f6a1db578615b1bac10a7b6157764",
+        "git_dirty": false,
+        "file_limits": {
+          "emax": 9,
+          "e2max": 18,
+          "lmax": 9
+        },
+        "filters": {
+          "emax": 9,
+          "e2max": 10
+        },
+        "taus": [
+          0.0,
+          5e-09,
+          1e-06,
+          2e-06,
+          4.9999999999999996e-06,
+          1e-05,
+          2e-05,
+          5e-05,
+          0.0001,
+          0.0002,
+          0.0005,
+          0.001,
+          0.002,
+          0.005,
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "convention": "B (docs/spec.md 4.2): unique pair states, lambda over both triangles",
+        "input_sha256": "3f5e9f76a382c787e5e4f6708cea3431b4c41652c4ae3c3c4d21f1fa6c2a4af1",
+        "tint": {
+          "hw": 16.0,
+          "A": 16
+        }
+      }
+    },
+    "W_F8_E8": {
+      "root": "science",
+      "path": "runs/2026-10-20-repaired-compatibility-deployment/recovered/runs/compatibility-3422230/baseline.json",
+      "sha256": "3ce39469d5d1481c33f0ac1007547b8f7f1ed3295a6648c7784dbf16c8ce75d1",
+      "metadata": {
+        "git_commit": "be6b584c27c875c91dc58128a2255f69ee309b29",
+        "git_dirty": false,
+        "file_limits": {
+          "emax": 8,
+          "e2max": 16,
+          "e3max": 8
+        },
+        "filters": {
+          "emax": 8,
+          "e2max": 16,
+          "e3max": 8
+        },
+        "taus": [
+          0.0,
+          5e-09,
+          1e-06,
+          2e-06,
+          4.9999999999999996e-06,
+          1e-05,
+          2e-05,
+          5e-05,
+          0.0001,
+          0.0002,
+          0.0005,
+          0.001,
+          0.002,
+          0.005,
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "convention": "B (docs/spec.md 4.2): unique triple states p<q<r, lambda over both triangles; structural = slots inside file tuples (equal parity, common J)",
+        "input_sha256": "c347cbcfe5c2095b99bed6659243a112fbbbaf8af4a7c645b6888e3a3e89e552",
+        "n_chunks": 256
+      }
+    },
+    "W_P6_E8": {
+      "root": "science",
+      "path": "runs/2026-10-20-p6-pilot-deployment/recovered/runs/p6-pilot-3422497/p6.json",
+      "sha256": "5e7828bba6037864a4c8a36718c2de1e0a8817fc6a4392388a85362c25e255fe",
+      "metadata": {
+        "git_commit": "09fd72f5add548f26877922ed9029cce15589d8e",
+        "git_dirty": false,
+        "file_limits": {
+          "emax": 8,
+          "e2max": 16,
+          "e3max": 8
+        },
+        "filters": {
+          "emax": 7,
+          "e2max": 8,
+          "e3max": 8
+        },
+        "taus": [
+          0.0,
+          5e-09,
+          1e-06,
+          2e-06,
+          4.9999999999999996e-06,
+          1e-05,
+          2e-05,
+          5e-05,
+          0.0001,
+          0.0002,
+          0.0005,
+          0.001,
+          0.002,
+          0.005,
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "convention": "B (docs/spec.md 4.2): unique triple states p<q<r, lambda over both triangles; structural = slots inside file tuples (equal parity, common J)",
+        "input_sha256": "c347cbcfe5c2095b99bed6659243a112fbbbaf8af4a7c645b6888e3a3e89e552",
+        "n_chunks": 256
+      }
+    },
+    "W_F8_E12": {
+      "root": "inputs",
+      "path": "runs/out/3n/emax8_e3max12_hw30to16.json",
+      "sha256": "83597e466336331ba95f3b2974f804f8b2bc0e8b3952124d6025404097939acb",
+      "metadata": {
+        "git_commit": "6cf23b010e2f6a1db578615b1bac10a7b6157764",
+        "git_dirty": false,
+        "file_limits": {
+          "emax": 10,
+          "e2max": 16,
+          "e3max": 12
+        },
+        "filters": {
+          "emax": 8,
+          "e2max": 16,
+          "e3max": 12
+        },
+        "taus": [
+          0.0,
+          5e-09,
+          1e-06,
+          2e-06,
+          4.9999999999999996e-06,
+          1e-05,
+          2e-05,
+          5e-05,
+          0.0001,
+          0.0002,
+          0.0005,
+          0.001,
+          0.002,
+          0.005,
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "convention": "B (docs/spec.md 4.2): unique triple states p<q<r, lambda over both triangles; structural = slots inside file tuples (equal parity, common J)",
+        "input_sha256": "80b0211c651e82e68e8fdebbdd7916e4ace321fb2d74245ccc0631d53928fbf2",
+        "n_chunks": 256
+      }
+    },
+    "W_P6_E12": {
+      "root": "inputs",
+      "path": "runs/out/3n/nmax6_O16_hw30to16.json",
+      "sha256": "8113d021ee7bc16007e2d9f4058a0ce4d1da12b151dbb4caa77f7c2055974378",
+      "metadata": {
+        "git_commit": "2ac03a763acfc4cf9b9fca5f2592ee96ac60e498",
+        "git_dirty": false,
+        "file_limits": {
+          "emax": 10,
+          "e2max": 16,
+          "e3max": 12
+        },
+        "filters": {
+          "emax": 7,
+          "e2max": 8,
+          "e3max": 9
+        },
+        "taus": [
+          0.0,
+          5e-09,
+          1e-06,
+          2e-06,
+          4.9999999999999996e-06,
+          1e-05,
+          2e-05,
+          5e-05,
+          0.0001,
+          0.0002,
+          0.0005,
+          0.001,
+          0.002,
+          0.005,
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "convention": "B (docs/spec.md 4.2): unique triple states p<q<r, lambda over both triangles; structural = slots inside file tuples (equal parity, common J)",
+        "input_sha256": "80b0211c651e82e68e8fdebbdd7916e4ace321fb2d74245ccc0631d53928fbf2",
+        "n_chunks": 256
+      }
+    },
+    "W_P8_E12": {
+      "root": "inputs",
+      "path": "runs/out/3n/nmax8_O16_hw30to16.json",
+      "sha256": "7c33839a791d497968fb695a27815d324c8b5a15ab44d8011d13a7039690d4d5",
+      "metadata": {
+        "git_commit": "2ac03a763acfc4cf9b9fca5f2592ee96ac60e498",
+        "git_dirty": false,
+        "file_limits": {
+          "emax": 10,
+          "e2max": 16,
+          "e3max": 12
+        },
+        "filters": {
+          "emax": 9,
+          "e2max": 10,
+          "e3max": 11
+        },
+        "taus": [
+          0.0,
+          5e-09,
+          1e-06,
+          2e-06,
+          4.9999999999999996e-06,
+          1e-05,
+          2e-05,
+          5e-05,
+          0.0001,
+          0.0002,
+          0.0005,
+          0.001,
+          0.002,
+          0.005,
+          0.01,
+          0.02,
+          0.05,
+          0.1
+        ],
+        "convention": "B (docs/spec.md 4.2): unique triple states p<q<r, lambda over both triangles; structural = slots inside file tuples (equal parity, common J)",
+        "input_sha256": "80b0211c651e82e68e8fdebbdd7916e4ace321fb2d74245ccc0631d53928fbf2",
+        "n_chunks": 256
+      }
+    }
+  },
+  "sources": {
+    "f7ce10a7cdcd5760926fd5cfe25f0e69576fd0eb9930d124ec569fd2edc659e5": {
+      "path": "runs/inputs/N3LO_EM500_srg2_hw16_emax8_e2max16.me2j.gz",
+      "bytes": 13863592
+    },
+    "3f5e9f76a382c787e5e4f6708cea3431b4c41652c4ae3c3c4d21f1fa6c2a4af1": {
+      "path": "runs/inputs/N3LO_EM500_srg2_hw16_emax9_e2max18.me2j.gz",
+      "bytes": 32338928
+    },
+    "c347cbcfe5c2095b99bed6659243a112fbbbaf8af4a7c645b6888e3a3e89e552": {
+      "path": "runs/inputs/3n/N3LO_N3LOEMlnl_hw30to16_e8_e2_16_e3_8.me3j.gz",
+      "bytes": 20492086
+    },
+    "80b0211c651e82e68e8fdebbdd7916e4ace321fb2d74245ccc0631d53928fbf2": {
+      "path": "runs/inputs/3n/N3LO_N3LOEMlnl_hw30to16_e10_e2_16_e3_12.me3j.gz",
+      "bytes": 1044932276
+    }
+  },
+  "cases": {
+    "F8_E8": {
+      "space": "F8",
+      "physical_3N_cutoff": 8,
+      "nn_manifest": "NN_F8",
+      "w_manifest": "W_F8_E8",
+      "w_alias_of": null,
+      "alias_justification": null,
+      "projected_limits": null
+    },
+    "F8_E12": {
+      "space": "F8",
+      "physical_3N_cutoff": 12,
+      "nn_manifest": "NN_F8",
+      "w_manifest": "W_F8_E12",
+      "w_alias_of": null,
+      "alias_justification": null,
+      "projected_limits": null
+    },
+    "P6_E8": {
+      "space": "P6",
+      "physical_3N_cutoff": 8,
+      "nn_manifest": "NN_P6",
+      "w_manifest": "W_P6_E8",
+      "w_alias_of": null,
+      "alias_justification": null,
+      "projected_limits": {
+        "emax": 7,
+        "e2max": 8,
+        "e3max": 9
+      }
+    },
+    "P6_E12": {
+      "space": "P6",
+      "physical_3N_cutoff": 12,
+      "nn_manifest": "NN_P6",
+      "w_manifest": "W_P6_E12",
+      "w_alias_of": null,
+      "alias_justification": null,
+      "projected_limits": {
+        "emax": 7,
+        "e2max": 8,
+        "e3max": 9
+      }
+    },
+    "P8_E8": {
+      "space": "P8",
+      "physical_3N_cutoff": 8,
+      "nn_manifest": "NN_P8",
+      "w_manifest": "W_F8_E8",
+      "w_alias_of": "F8_E8",
+      "alias_justification": "Derivation 10: identical retained triples at E=8; NN/T/register remain P8",
+      "projected_limits": {
+        "emax": 9,
+        "e2max": 10,
+        "e3max": 11
+      }
+    },
+    "P8_E12": {
+      "space": "P8",
+      "physical_3N_cutoff": 12,
+      "nn_manifest": "NN_P8",
+      "w_manifest": "W_P8_E12",
+      "w_alias_of": null,
+      "alias_justification": null,
+      "projected_limits": {
+        "emax": 9,
+        "e2max": 10,
+        "e3max": 11
+      }
+    }
+  },
+  "evidence": {
+    "source-audit-results.json": {
+      "path": "runs/2026-10-19-comparison-source-audit/results.json",
+      "sha256": "ba9c1c544113425d0a4973dc9cb550db8f1cc0edfca5848d6bbc61c67372df48"
+    },
+    "nn-producer-changes.diff": {
+      "path": "runs/2026-10-19-comparison-lineage/nn_changes.diff",
+      "sha256": "e51d727612cdb273e6f83fd27a5c4c30d9ff78f3f7928c688a7c605a2c176f04"
+    },
+    "post-streaming-changes.diff": {
+      "path": "runs/2026-10-19-comparison-lineage/post_streaming.diff",
+      "sha256": "ba5fdc2253f10e8f45723b5c486920c8d503e4e95b004e48369984a71551f0f0"
+    },
+    "compatibility-manifest.json": {
+      "path": "runs/2026-10-20-repaired-compatibility-deployment/recovered/runs/compatibility-3422230/manifest.json",
+      "sha256": "483b8d4c65b474ec77406d599201042bb4394516e4edaa569c8e4ced4508e01c"
+    },
+    "pilot-manifest.json": {
+      "path": "runs/2026-10-20-p6-pilot-deployment/recovered/runs/p6-pilot-3422497/manifest.json",
+      "sha256": "75f9205ee07ff33cf652c629bae1bf22f435cfd9e19bf9411cb4842a4b188a35"
+    },
+    "pilot-verification.json": {
+      "path": "runs/2026-10-20-p6-pilot-deployment/verification.json",
+      "sha256": "7e00003f2556ecc4989835127d8f706dfa9ae4a42ec18af88e641fd65e1ee67d"
+    },
+    "local-validation.md": {
+      "path": "notes/experiments/2026-10-19-comparison-local-validation.md",
+      "sha256": "ec9ade3cb098ad7ef8e61a3266c92990142f78700050d14bf0a65ef737a921be"
+    },
+    "deltaai-provenance.md": {
+      "path": "notes/experiments/2026-10-19-deltaai-provenance.md",
+      "sha256": "110c009ab983545e5b36eceab9ca79d247026a6ded684c71f8448ed3c649e96c"
+    },
+    "imsrg-oracles.md": {
+      "path": "notes/experiments/2026-10-19-imsrg-oracle-recovery.md",
+      "sha256": "757005e11fe1853ea7484d10f74b75c11b80374fe44abc97250ac38955671b25"
+    },
+    "compatibility-result.md": {
+      "path": "notes/experiments/2026-10-20-repaired-compatibility.md",
+      "sha256": "c04b79ca1952ef1b88731600050cfa10ec047eb646bbed8d9e6c11828a02e3bd"
+    },
+    "pilot-result.md": {
+      "path": "notes/experiments/2026-10-20-p6-pilot.md",
+      "sha256": "869ce90b768c2b867948f4941d001b9d05a6de07b3e68fc970639aafaca9e156"
+    }
+  },
+  "limitations": [
+    "Historical NN generator command/runtime and complete historical BLAS environments are not recovered.",
+    "Upstream float32 lab storage and text precision remain; tau=0 does not restore lost information or establish exact physical support.",
+    "Nmax 6/8 are scenarios, not established equal-energy-accuracy spaces.",
+    "Cost model, preparation, confidence and K3 remain unevaluated in this snapshot."
+  ],
+  "aggregation": "Integer sums and math.fsum of blocks; raw totals verified at rtol=atol=1e-12. Full T scales intrinsic one-body norms/max by 16/15; no positive-threshold counts are rescaled.",
+  "historical_snapshot_sha256": "97d5ff59a32bcd4bf389b6dd5ede7e9f617f78c4c99f653e84a368cc685cc5c8"
+}
