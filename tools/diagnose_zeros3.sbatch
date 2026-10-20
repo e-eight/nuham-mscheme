@@ -10,7 +10,7 @@
 #SBATCH --gpus-per-node=1
 #SBATCH --mem=512M
 #SBATCH --time=00:01:00
-#SBATCH --output=zero-diagnostic-%j.log
+#SBATCH --output=runs/zero-diagnostic-%j.log
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?Submit from the isolated checkout}"
 test "$(git rev-parse HEAD)" = "${1:?Pass the deployed commit SHA}"

@@ -54,7 +54,8 @@ peak RSS. Runs never overwrite existing directories. There is no checkpoint
 support; incomplete runs remain incomplete. No automatic retry is authorized.
 
 Deployment: push this diagnostic branch, fetch it on DeltaAI, and create an
-isolated detached checkout at its full commit SHA. From that directory submit
+isolated detached checkout at its full commit SHA. From that directory create
+the ignored log directory with `mkdir -p runs`, then submit
 `sbatch tools/diagnose_zeros3.sbatch FULL_COMMIT_SHA`. The job pins HEAD and
 fixture hashes. The existing virtual environment is reused, with actual
 versions recorded. No package installation or change to the active producer.
