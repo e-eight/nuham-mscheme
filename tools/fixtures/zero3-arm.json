@@ -1,0 +1,11 @@
+{
+  "source_job": 3421992,
+  "source_commit": "e5ccd913d6e50fd72794b03561eedc65d9054181",
+  "source_host": "gh027",
+  "architecture": "aarch64",
+  "fixture": "native-fixture.npz",
+  "sha256": "aa6cb5ddba109301ff74bf98fb9e30b55198919a8093ab8433db47770991a6a7",
+  "seed": 20261010,
+  "purpose": "Frozen regression input, not an expected-output correctness oracle.",
+  "diagnosis": "qchem-to-nuclear notes/experiments/2026-10-20-zero-diagnostic-result.md"
+}

@@ -27,8 +27,8 @@ accepted qchem-to-nuclear comparison specification; it changes no kernel.
   before work, then finalized with status and hashes. Production uses clean
   pinned commits. Exploratory dirty runs must preserve their diff.
 - Local and DeltaAI use their existing virtual environments; record actual
-  package versions. DeltaAI account is bhhk-dtai-gh. The user authorized one
-  bounded zero-pattern diagnostic submission on 2026-10-20; additional jobs
-  need separate authorization. No numerical diagnostics on login nodes.
+  package versions. DeltaAI account is bhhk-dtai-gh. On 2026-10-20 the user authorized
+  Git deployment and minimal necessary DeltaAI jobs for the comparison repair;
+  use measured resource estimates and pinned revisions. No numerical diagnostics on login nodes.
 - Scientific specifications live in docs/spec.md; diagnosis records in docs/.
   New conventions must be recorded when adopted, not inferred from a changed test.

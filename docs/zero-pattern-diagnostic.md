@@ -96,3 +96,30 @@ PYTHONPATH=src python tools/analyze_zero3.py --run RETRIEVED_RUN --out runs/exac
 
 This follow-up does not alter or redeploy the submitted e5ccd91 revision and
 does not authorize an additional cluster job.
+
+
+## Test-contract repair after the completed diagnosis (2026-10-20)
+
+The exact zero-mask comparison against the scalar reference was invalid under
+floating-point cancellation. The repaired test keeps every norm/structural
+check and the existing 1e-13 MeV absolute element tolerance, and assembles the
+signed batched entries by canonical state labels without the stats reducer.
+It checks strict counts at every TAUS entry for full, upper and diagonal
+matrices, structural coverage, write-once indexing, and the triangle identity.
+No kernel, threshold, fixture generator, or numerical tolerance changes.
+
+The ARM fixture from job 3421992 is frozen with provenance in tools/fixtures.
+Its four suspect Hermitian pairs are exactly nonzero for stored coefficients
+under the independent exact CG oracle. The repaired test is run on this case
+without requiring a platform to reproduce a scalar zero-mask mismatch.
+Deliberate count and symmetric sign corruptions must both fail the new gate.
+
+Review: repository conventions and source-byte invariance checked; the test
+implements represented-operator counting under ADR 0008, not physical zeros.
+The independent scalar/CG accuracy checks remain distinct from same-value
+accumulator checks. Absolute values are taken after each signed entry is
+formed; mirrors are written once. No error-budget or physical accuracy claim
+is inferred from a numerical zero or an exact coupling sum on rounded input.
+The old diagnostic CLI retains its historical src/tests guard; use the old
+pinned revision to repeat that original experiment. New compatibility work
+uses tools/comparison/compatibility.py and its fail-stop ladder.

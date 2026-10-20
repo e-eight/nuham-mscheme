@@ -27,6 +27,7 @@ from nuham_mscheme.mscheme3 import (
     triple_blocks,
     tuple_tensor,
 )
+from nuham_mscheme.stats2 import TAUS
 from nuham_mscheme.stats3 import ThreeBodyStats
 
 REAL = (
@@ -221,20 +222,70 @@ def _slots_in_file(basis: TripleBasis, tuples, states) -> int:
     return int(ok[np.ix_(idx, idx)].sum())
 
 
+def _assemble_batched(basis, tuples, blocks):
+    """Scatter signed batched entries by canonical states, without the stats reducer.
+
+    The reference state grid comes from the slow dense implementation. Duplicate
+    writes are errors; off-diagonal file tuples supply their Hermitian partners.
+    This checks indexing/counting of represented values, not the coupling algebra.
+    """
+    positions = {key: {g: i for i, g in enumerate(states)} for key, (_, states) in blocks.items()}
+    matrices = {key: np.zeros_like(mat) for key, (mat, _) in blocks.items()}
+    written = {key: np.zeros(mat.shape, dtype=bool) for key, (mat, _) in blocks.items()}
+    for tup in tuples:
+        tensor = tuple_tensor(basis, tup, signed=True)
+        for p, (ab, ak) in enumerate(zip(tensor.pair_bra, tensor.pair_ket, strict=True)):
+            for mi, m2 in enumerate(tensor.m2):
+                rb = np.flatnonzero(tensor.ok_bra[p, mi])
+                rk = np.flatnonzero(tensor.ok_ket[p, mi])
+                if not len(rb) or not len(rk):
+                    continue
+                key = (int(tensor.pair_sector[p]), int(m2))
+                gb = basis.slot_states(tup.bra, int(ab)).g[tensor.rows_bra[mi, rb]]
+                gk = basis.slot_states(tup.ket, int(ak)).g[tensor.rows_ket[mi, rk]]
+                rows = [positions[key][tuple(g)] for g in gb]
+                cols = [positions[key][tuple(g)] for g in gk]
+                values = tensor.x[p, mi][np.ix_(rb, rk)]
+                writes = [(rows, cols, values)]
+                if tup.bra != tup.ket:
+                    writes.append((cols, rows, values.T))
+                for rr, cc, xx in writes:
+                    ix = np.ix_(rr, cc)
+                    assert not written[key][ix].any(), (key, tup.bra, tup.ket)
+                    matrices[key][ix] = xx
+                    written[key][ix] = True
+    return matrices, written
+
+
 def test_streaming_stats_match_dense(space):
+    """Slow twin checks accuracy; direct batched assembly checks exact counts.
+
+    Scalar and batched contractions can round a cancelling entry to different
+    sides of exact zero. All TAUS retain strict > semantics, including tau=0.
+    """
     basis, tuples, blocks, _ = space
     st = ThreeBodyStats(basis)
     for t in tuples:
         st.add_tuple(t)
     got = st.blocks()
+    batch, written = _assemble_batched(basis, tuples, blocks)
     assert set(got) == {(SECTORS3[s], m2) for s, m2 in blocks}
     for (s, m2), (mat, states) in blocks.items():
         b = got[(SECTORS3[s], m2)]
         a = np.abs(mat)
         assert b.lambda_full == pytest.approx(a.sum(), rel=1e-12), (s, m2)
         assert b.lambda_diag == pytest.approx(np.trace(a), rel=1e-12), (s, m2)
-        assert b.nnz_full[0] == int((a > 0).sum()), (s, m2)
-        assert b.nnz_ut(0) == int((np.triu(a) > 0).sum()), (s, m2)
+        represented = batch[(s, m2)]
+        # Preserve the existing block-kernel element tolerance: absolute 1e-13
+        # MeV at toy scale, including cancelling entries; do not compare zero masks.
+        np.testing.assert_allclose(represented, mat, atol=1e-13, rtol=0)
+        counts = np.abs(represented)
+        for i, tau in enumerate(TAUS):
+            assert b.nnz_full[i] == np.count_nonzero(counts > tau), (s, m2, tau)
+            assert b.nnz_ut(i) == np.count_nonzero(np.triu(counts) > tau), (s, m2, tau)
+            assert b.nnz_diag[i] == np.count_nonzero(np.diag(counts) > tau), (s, m2, tau)
+            assert b.nnz_full[i] == 2 * b.nnz_ut(i) - b.nnz_diag[i]
+        assert np.count_nonzero(written[(s, m2)]) == b.structural_full
         assert b.structural_full == _slots_in_file(basis, tuples, states), (s, m2)
         assert b.structural_full <= a.size
         assert b.vmax == pytest.approx(a.max(), rel=1e-12)

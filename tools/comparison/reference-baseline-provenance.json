@@ -1,0 +1,78 @@
+{
+  "status": "passed",
+  "timestamp_utc": "2026-10-20T04:03:05Z",
+  "git_commit": "6cf23b010e2f6a1db578615b1bac10a7b6157764",
+  "git_dirty": false,
+  "source": {
+    "path": "/home/soham/Projects/nuclear-physics/nuham-mscheme/runs/inputs/3n/N3LO_N3LOEMlnl_hw30to16_e8_e2_16_e3_8.me3j.gz",
+    "sha256": "c347cbcfe5c2095b99bed6659243a112fbbbaf8af4a7c645b6888e3a3e89e552"
+  },
+  "reference": {
+    "path": "/home/soham/Projects/nuclear-physics/nuham-mscheme/runs/out/3n/e8_from_e10cut.json",
+    "sha256": "e8c919c1a393454809ae5dc2d8c7b5bbb2107c881d837a6c3f05c670e6be42ff"
+  },
+  "params": {
+    "file_limits": [
+      8,
+      16,
+      8
+    ],
+    "use_limits": [
+      8,
+      16,
+      8
+    ],
+    "workers": 4,
+    "n_chunks": 256,
+    "rtol": 1e-12,
+    "atol_MeV": 1e-12
+  },
+  "command": [
+    "/home/soham/Projects/nuclear-physics/qchem-to-nuclear/../nuham-mscheme/.venv/bin/python",
+    "-m",
+    "nuham_mscheme.run3",
+    "/home/soham/Projects/nuclear-physics/nuham-mscheme/runs/inputs/3n/N3LO_N3LOEMlnl_hw30to16_e8_e2_16_e3_8.me3j.gz",
+    "--emax",
+    "8",
+    "--e2max",
+    "16",
+    "--e3max",
+    "8",
+    "--workers",
+    "4",
+    "--verify-count",
+    "--out",
+    "/home/soham/Projects/nuclear-physics/qchem-to-nuclear/runs/2026-10-19-comparison-baseline-recheck-v2/baseline.json"
+  ],
+  "seeds": {},
+  "host": "darjeeling",
+  "python": "3.13.2 (main, Feb  5 2025, 19:11:32) [Clang 19.1.6 ]",
+  "environment_record": "../2026-10-19-comparison-source-audit-v2/manifest.json",
+  "threads": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": null
+  },
+  "outputs": [
+    {
+      "path": "baseline.json",
+      "sha256": "85d576427cb01adff4fbdc6c0f6116bb308a082d3b8fb0d25d1fc7cdb4b7e5de"
+    },
+    {
+      "path": "stdout.log",
+      "sha256": "affd0ad6bb5b51013a93ac52bc433b952be609d798cf9ff2170c1c14b3004694"
+    }
+  ],
+  "previous_attempt": "/home/soham/Projects/nuclear-physics/qchem-to-nuclear/runs/2026-10-19-comparison-baseline-recheck",
+  "memory_measurement": "getrusage RUSAGE_CHILDREN maxrss KiB; largest child, not simultaneous aggregate",
+  "validation": {
+    "blocks_checked": 80,
+    "max_norm_identity_residual_MeV": 3.552713678800501e-15
+  },
+  "exit_code": 0,
+  "all_block_counts_match": true,
+  "max_relative_norm_or_max_difference": 0.0,
+  "nnz_ut_zero": 526367562,
+  "wall_time_s": 18.627349239999603,
+  "max_child_rss_KiB": 281448
+}

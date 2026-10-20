@@ -1,0 +1,113 @@
+{
+  "status": "passed",
+  "timestamp_utc": "2026-10-20T04:00:31Z",
+  "git_commit": "6cf23b010e2f6a1db578615b1bac10a7b6157764",
+  "git_dirty": false,
+  "source": {
+    "path": "/home/soham/Projects/nuclear-physics/nuham-mscheme/runs/inputs/3n/N3LO_N3LOEMlnl_hw30to16_e8_e2_16_e3_8.me3j.gz",
+    "sha256": "c347cbcfe5c2095b99bed6659243a112fbbbaf8af4a7c645b6888e3a3e89e552"
+  },
+  "params": {
+    "file_limits": [
+      8,
+      16,
+      8
+    ],
+    "use_limits": [
+      2,
+      4,
+      4
+    ],
+    "workers": [
+      1,
+      3
+    ],
+    "n_chunks": 256
+  },
+  "commands": [
+    [
+      "/home/soham/Projects/nuclear-physics/qchem-to-nuclear/../nuham-mscheme/.venv/bin/python",
+      "-m",
+      "nuham_mscheme.run3",
+      "/home/soham/Projects/nuclear-physics/nuham-mscheme/runs/inputs/3n/N3LO_N3LOEMlnl_hw30to16_e8_e2_16_e3_8.me3j.gz",
+      "--emax",
+      "8",
+      "--e2max",
+      "16",
+      "--e3max",
+      "8",
+      "--emax-use",
+      "2",
+      "--e2max-use",
+      "4",
+      "--e3max-use",
+      "4",
+      "--workers",
+      "1",
+      "--verify-count",
+      "--out",
+      "/home/soham/Projects/nuclear-physics/qchem-to-nuclear/runs/2026-10-19-comparison-local-smoke/w1.json"
+    ],
+    [
+      "/home/soham/Projects/nuclear-physics/qchem-to-nuclear/../nuham-mscheme/.venv/bin/python",
+      "-m",
+      "nuham_mscheme.run3",
+      "/home/soham/Projects/nuclear-physics/nuham-mscheme/runs/inputs/3n/N3LO_N3LOEMlnl_hw30to16_e8_e2_16_e3_8.me3j.gz",
+      "--emax",
+      "8",
+      "--e2max",
+      "16",
+      "--e3max",
+      "8",
+      "--emax-use",
+      "2",
+      "--e2max-use",
+      "4",
+      "--e3max-use",
+      "4",
+      "--workers",
+      "3",
+      "--verify-count",
+      "--out",
+      "/home/soham/Projects/nuclear-physics/qchem-to-nuclear/runs/2026-10-19-comparison-local-smoke/w3.json"
+    ]
+  ],
+  "seeds": {},
+  "host": "darjeeling",
+  "python": "3.13.2 (main, Feb  5 2025, 19:11:32) [Clang 19.1.6 ]",
+  "env": {
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": null
+  },
+  "environment_record": "../2026-10-19-comparison-source-audit-v2/manifest.json",
+  "outputs": [
+    {
+      "path": "w1.json",
+      "sha256": "2eacd35446cf2fee8caf81faa7c9308ea097159050b17570eeb4f5ca0275b51e"
+    },
+    {
+      "path": "run1.log",
+      "sha256": "91e025fb40507e9f83698a83296047fdd31a4dc5345f2a92f1e514a730fed34f"
+    },
+    {
+      "path": "w3.json",
+      "sha256": "2eacd35446cf2fee8caf81faa7c9308ea097159050b17570eeb4f5ca0275b51e"
+    },
+    {
+      "path": "run0.log",
+      "sha256": "c379e5d74ae794e22495525551391ab108a7f6c211e6291a9b5b00a6518ae1c5"
+    }
+  ],
+  "timings_s": [
+    0.6211024629992608,
+    0.626989060001506
+  ],
+  "validation": {
+    "blocks_checked": 44,
+    "max_norm_identity_residual_MeV": 2.220446049250313e-16
+  },
+  "exit_code": 0,
+  "worker_results_exactly_equal": true,
+  "wall_time_s": 1.3060606910003116
+}
